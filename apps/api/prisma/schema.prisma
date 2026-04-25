@@ -94,7 +94,7 @@ model AlgorithmCase {
   @@unique([setId, slug])
   @@index([setId, displayOrder])
   @@index([tags], type: Gin)
-  // search_vector tsvector + GIN index added via raw migration (see §21.3)
+  // search_vector tsvector, GIN index, and immutable_array_to_string() helper added via raw migration (see §21.3)
   @@map("algorithm_cases")
 }
 
