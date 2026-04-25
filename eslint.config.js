@@ -1,6 +1,7 @@
 import js from '@eslint/js'
+import tseslint from 'typescript-eslint'
 
-export default [
+export default tseslint.config(
   {
     ignores: [
       '**/node_modules/**',
@@ -16,4 +17,5 @@ export default [
     ],
   },
   js.configs.recommended,
-]
+  ...tseslint.configs.recommended,
+)
