@@ -62,11 +62,9 @@ describe('AlgorithmSetSchema', () => {
       methodId: 'm_cfop',
       slug: 'pll',
       name: 'PLL',
-      displayName: 'Permutation of Last Layer',
       caseCountExpected: 21,
       recognitionBasis: 'PLL_PERMUTATION',
       displayOrder: 3,
-      descriptionMd: null,
     })
     expect(result.success).toBe(true)
   })
@@ -115,13 +113,12 @@ describe('AlgorithmVariantSchema', () => {
       isPrimary: true,
       attribution: 'Standard',
       fingertrickMd: null,
-      videoUrl: 'https://www.youtube.com/watch?v=abc123',
       displayOrder: 0,
     })
     expect(result.success).toBe(true)
   })
 
-  it('accepts a variant with no video', () => {
+  it('accepts a minimal variant', () => {
     const result = AlgorithmVariantSchema.safeParse({
       id: 'v_x',
       caseId: 'c_x',
@@ -131,25 +128,9 @@ describe('AlgorithmVariantSchema', () => {
       isPrimary: false,
       attribution: null,
       fingertrickMd: null,
-      videoUrl: null,
       displayOrder: 1,
     })
     expect(result.success).toBe(true)
   })
 
-  it('rejects a non-URL videoUrl', () => {
-    const result = AlgorithmVariantSchema.safeParse({
-      id: 'v_x',
-      caseId: 'c_x',
-      notation: 'R',
-      moveCountHtm: 1,
-      moveCountStm: 1,
-      isPrimary: false,
-      attribution: null,
-      fingertrickMd: null,
-      videoUrl: 'not a url',
-      displayOrder: 0,
-    })
-    expect(result.success).toBe(false)
-  })
 })

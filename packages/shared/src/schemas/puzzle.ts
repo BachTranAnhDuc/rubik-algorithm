@@ -31,7 +31,6 @@ export const AlgorithmVariantSchema = z.object({
   isPrimary: z.boolean(),
   attribution: z.string().nullable(),
   fingertrickMd: z.string().nullable(),
-  videoUrl: z.string().url().nullable(),
   displayOrder: z.number().int().nonnegative(),
 })
 
@@ -56,11 +55,9 @@ export const AlgorithmSetSchema = z.object({
   methodId: z.string(),
   slug: SlugSchema,
   name: z.string().min(1),
-  displayName: z.string().nullable(),
   caseCountExpected: z.number().int().nonnegative(),
   recognitionBasis: RecognitionBasisSchema,
   displayOrder: z.number().int().nonnegative(),
-  descriptionMd: z.string().nullable(),
 })
 
 export const AlgorithmSetWithCasesSchema = AlgorithmSetSchema.extend({
