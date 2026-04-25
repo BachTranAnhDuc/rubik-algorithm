@@ -37,7 +37,7 @@ pnpm workspaces + Turborepo. Three apps (`web`, `api`, `docs`), three packages (
 - **`exports` field declares the public surface.** Subpath exports (`./ssr`, `./client`) when a package legitimately ships multiple entry points (visualizer).
   - Why: bare `main`/`module` is the legacy path; `exports` enforces what's importable and lets bundlers tree-shake correctly.
 - **`type: "module"` everywhere.** ESM is the format.
-  - Why: matches Node 22, Vite, and modern tooling. CJS shims are dead weight.
+  - Why: matches Node 24, Vite, and modern tooling. CJS shims are dead weight.
 - **`peerDependencies` for things the consumer must provide** (e.g., `react`, `three` in `visualizer`). `dependencies` for things the package controls.
   - Why: prevents duplicate React in `apps/web` (one from web, one from visualizer); peer deps share a single version.
 - **`scripts: { build, dev, lint, typecheck, test }` in every package** with consistent names.
@@ -75,7 +75,7 @@ pnpm workspaces + Turborepo. Three apps (`web`, `api`, `docs`), three packages (
 When a new app or package is justified, the steps are:
 
 1. Create `apps/<name>/` or `packages/<name>/`.
-2. `package.json` with `"name": "@rubik/<name>"`, `type: "module"`, `engines.node: ">=22"`, scripts mirroring the existing pattern.
+2. `package.json` with `"name": "@rubik/<name>"`, `type: "module"`, `engines.node: ">=24"`, scripts mirroring the existing pattern.
 3. `tsconfig.json` extending `../../tsconfig.json`.
 4. Add the workspace to `pnpm-workspace.yaml` (already covers `apps/*` and `packages/*` — this is automatic).
 5. `pnpm install` from the root regenerates the lockfile.

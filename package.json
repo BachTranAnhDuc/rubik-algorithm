@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": ">=22.0.0",
+    "node": ">=24.0.0",
     "pnpm": ">=9.0.0"
   },
   "scripts": {
@@ -19,10 +19,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
-    "@types/node": "^22.10.0",
+    "@types/node": "^24.0.0",
     "eslint": "^9.16.0",
     "prettier": "^3.4.0",
     "turbo": "^2.3.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.59.0"
   }
 }

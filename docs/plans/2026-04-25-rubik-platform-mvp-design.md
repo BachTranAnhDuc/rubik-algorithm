@@ -1849,7 +1849,7 @@ Multi-stage. pnpm-aware. Prisma generate happens during build, not at runtime.
 # syntax=docker/dockerfile:1.7
 
 # ---- Stage 1: deps (cache-friendly) ----
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 RUN corepack enable
 WORKDIR /repo
 
@@ -1862,7 +1862,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 # ---- Stage 2: build ----
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 
@@ -1878,7 +1878,7 @@ RUN pnpm -w turbo run build --filter=@rubik/api...
 RUN pnpm --filter @rubik/api deploy --prod --legacy /out
 
 # ---- Stage 3: runtime (slim) ----
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 RUN apk add --no-cache tini
 ENV NODE_ENV=production
 WORKDIR /app

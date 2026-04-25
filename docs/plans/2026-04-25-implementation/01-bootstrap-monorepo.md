@@ -12,7 +12,7 @@ A clean, install-able pnpm + Turborepo monorepo. After this plan, `pnpm install`
 
 Repo-root files:
 
-- `package.json` — root, private, `engines.node ≥ 22`, scripts proxying to turbo, devDeps for turbo + typescript + prettier + eslint + `@types/node`.
+- `package.json` — root, private, `engines.node ≥ 24`, scripts proxying to turbo, devDeps for turbo + typescript + prettier + eslint + `@types/node`.
 - `pnpm-workspace.yaml` — `apps/*` and `packages/*`.
 - `turbo.json` — pipelines for `build`, `dev`, `lint`, `typecheck`, `test`.
 - `tsconfig.json` — base config (strict, ES2022, bundler resolution, all `noUncheckedIndexedAccess` etc.).
