@@ -64,10 +64,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
               .replace(/Exception$/, '')
               .replace(/([a-z])([A-Z])/g, '$1_$2')
               .toLowerCase()
+      const details =
+        typeof res === 'object' && res !== null && 'details' in res
+          ? (res as { details: unknown }).details
+          : undefined
 
       return {
         status,
-        body: { error: { code, message } },
+        body: { error: { code, message, ...(details !== undefined ? { details } : {}) } },
       }
     }
 
