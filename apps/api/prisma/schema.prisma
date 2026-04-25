@@ -1,13 +1,179 @@
-// Sub-phase 1 placeholder. Models land in sub-phase 2 (plan 05).
-// This empty schema exists only so `prisma generate` produces a Prisma
-// client and `PrismaService` can instantiate at boot.
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres", "relationJoins"]
 }
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// Catalog: Puzzle → Method → Set → Case → Variant
+// ============================================================
+
+model Puzzle {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  name               String
+  wcaEventCode       String?
+  displayOrder       Int      @default(0)
+  stateSchemaVersion String   @default("v1")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  methods Method[]
+
+  @@map("puzzles")
+}
+
+model Method {
+  id            String   @id @default(cuid())
+  puzzleId      String
+  slug          String
+  name          String
+  descriptionMd String?
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  puzzle Puzzle         @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+  sets   AlgorithmSet[]
+
+  @@unique([puzzleId, slug])
+  @@index([puzzleId, displayOrder])
+  @@map("methods")
+}
+
+enum RecognitionBasis {
+  LAST_LAYER
+  F2L_SLOT
+  OLL_ORIENTATION
+  PLL_PERMUTATION
+  CROSS
+  OTHER
+}
+
+model AlgorithmSet {
+  id                String           @id @default(cuid())
+  methodId          String
+  slug              String
+  name              String
+  caseCountExpected Int
+  recognitionBasis  RecognitionBasis
+  displayOrder      Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  method Method          @relation(fields: [methodId], references: [id], onDelete: Cascade)
+  cases  AlgorithmCase[]
+
+  @@unique([methodId, slug])
+  @@index([methodId, displayOrder])
+  @@map("algorithm_sets")
+}
+
+model AlgorithmCase {
+  id            String   @id @default(cuid())
+  setId         String
+  slug          String
+  name          String
+  displayName   String
+  displayOrder  Int      @default(0)
+  caseState     String // 54-char sticker string (face order UFRDLB)
+  recognitionMd String?
+  tags          String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  set            AlgorithmSet       @relation(fields: [setId], references: [id], onDelete: Cascade)
+  variants       AlgorithmVariant[]
+  userAlgorithms UserAlgorithm[]
+
+  @@unique([setId, slug])
+  @@index([setId, displayOrder])
+  @@index([tags], type: Gin)
+  // search_vector tsvector + GIN index added via raw migration (see §21.3)
+  @@map("algorithm_cases")
+}
+
+model AlgorithmVariant {
+  id            String   @id @default(cuid())
+  caseId        String
+  notation      String
+  moveCountHtm  Int
+  moveCountStm  Int
+  isPrimary     Boolean  @default(false)
+  attribution   String?
+  fingertrickMd String?
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  case             AlgorithmCase   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  chosenByUserAlgs UserAlgorithm[] @relation("UserAlgorithm_chosenVariant")
+
+  @@index([caseId, displayOrder])
+  @@map("algorithm_variants")
+}
+
+// ============================================================
+// Users + Auth
+// ============================================================
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  displayName String?
+  googleSub   String    @unique
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  algorithms    UserAlgorithm[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+enum LearningStatus {
+  LEARNING
+  LEARNED
+  MASTERED
+}
+
+model UserAlgorithm {
+  userId          String
+  caseId          String
+  chosenVariantId String?
+  status          LearningStatus @default(LEARNING)
+  personalNotesMd String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  case          AlgorithmCase     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  chosenVariant AlgorithmVariant? @relation("UserAlgorithm_chosenVariant", fields: [chosenVariantId], references: [id], onDelete: SetNull)
+
+  @@id([userId, caseId])
+  @@index([userId, status])
+  @@map("user_algorithms")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // SHA-256 of raw token; raw is never stored
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("refresh_tokens")
 }
