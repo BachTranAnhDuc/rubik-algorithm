@@ -644,3 +644,212 @@ Out of band: OpenTelemetry spans → Grafana Cloud
             Sentry breadcrumbs/errors → Sentry
             pino log lines (stdout) → Fly log shipper → Grafana Loki
 ```
+
+## 19. Web deep structure (`apps/web`)
+
+Detailed structure for the Next.js frontend: libraries, folder layout, routing/rendering, data fetching, auth, visualizer integration, styling, SEO, performance, testing.
+
+UI is **shadcn/ui first**, state and data are **TanStack-first** wherever the ecosystem has a fit.
+
+### 19.1 Library inventory
+
+| Concern | Pick | Rationale |
+|---|---|---|
+| Framework | Next.js 15 (App Router) | SSG/SSR/RSC native; SEO is the growth engine. |
+| React | React 19 | Server Components, `use()`, form actions, Compiler-ready. |
+| **UI primitives + components** | **shadcn/ui** (CLI-installed, copied into `src/components/ui/`) | Built on Radix + Tailwind + `cva` + `tailwind-merge`; components owned in repo, no version lock-in. Radix etc. are transitive choices, not separate picks. |
+| Styling | Tailwind v4 (CSS-first, `@theme`) | Fast, no postcss config needed. |
+| Class composition | `clsx` + `tailwind-merge` (via `cn()`) | shadcn convention. |
+| Icons | `lucide-react` | shadcn's default. |
+| Toasts | `sonner` | shadcn-recommended; tiny, animated, accessible. |
+| Command palette | `cmdk` | shadcn-recommended; no TanStack equivalent. |
+| **Tables** | **`@tanstack/react-table` v8** | Headless, type-safe; rendered through shadcn `<Table>` skin. Used on `/me/algorithms`, `/search`, future admin. |
+| **Virtualization** | **`@tanstack/react-virtual`** | Long lists (algorithm sheet at scale, search results, future trainer history). |
+| **Forms** | **`@tanstack/react-form`** + zod adapter | Type-safe form state; reuses `packages/shared` zod schemas. Replaces react-hook-form for ecosystem consistency. |
+| **Server state** | **`@tanstack/react-query` v5** (+ devtools) | Used for client-side mutations (`/me/*`); RSC handles most reads with `<HydrationBoundary>` for handoff. |
+| **Client state / state machines** | **`@tanstack/store`** + `@tanstack/react-store` | Timer state machine + visualizer playback controls. |
+| **Debounce/throttle** | **`@tanstack/react-pacer`** | Palette and `/search` input. |
+| Auth (web side) | Auth.js v5 (`next-auth`) | Google OAuth handshake; POSTs Google ID token to api `/v1/auth/google`, receives api JWTs, sets httpOnly cookies. Api remains source of truth. |
+| Validation | `zod` (shared) | Same schemas as api. End-to-end type safety. |
+| Markdown render | `react-markdown` + `remark-gfm` + `rehype-sanitize` | For `recognition_md`, `personal_notes_md` from api. |
+| 3D | three.js + `@react-three/fiber` + `@react-three/drei` (via `packages/visualizer`) | Lazy-loaded, `ssr: false`. |
+| Dates | `dayjs` | Matches api. |
+| SEO | Next.js Metadata API + dynamic `app/sitemap.ts` | Sitemap calls api at build for the catalog tree. |
+| Dynamic OG | Next 15 `opengraph-image.tsx` (uses `next/og`) | Per-case cube state image. |
+| Fonts | `next/font/google` (Inter + JetBrains Mono) | Self-hosted, zero CLS. |
+| Bundle analysis | `@next/bundle-analyzer` | On-demand via `ANALYZE=1`. |
+| Errors | `@sentry/nextjs` | Source maps, RSC support. |
+| Server logging | `pino` via `instrumentation.ts` | Matches api log shape. |
+| Analytics | TBD (`@vercel/analytics` quick win, or Plausible) | Open question §14. |
+| Testing | `vitest` + `@testing-library/react` + `user-event` + `@playwright/test` | Same runner across monorepo. |
+| Storybook | `storybook` + `@storybook/nextjs` | Visual review for `CubeVisualizer`, `CaseCard`, `SetGrid`, data-table wrapper. |
+
+**Routing stays on Next.js App Router** (not TanStack Router) — RSC + SSG are non-negotiable for SEO and the catalog content size.
+
+### 19.2 Folder structure
+
+```
+apps/web/
+├── public/
+│   ├── og/                              base OG fallbacks
+│   ├── favicon.ico, icon.png, apple-icon.png
+│   └── robots.txt                       (or via app/robots.ts)
+│
+├── src/
+│   ├── app/                             App Router
+│   │   ├── layout.tsx                   root: fonts, providers, theme, head defaults
+│   │   ├── page.tsx                     landing
+│   │   ├── globals.css                  Tailwind v4 @theme tokens
+│   │   ├── error.tsx
+│   │   ├── not-found.tsx
+│   │   ├── loading.tsx
+│   │   ├── sitemap.ts                   build-time fetch from api
+│   │   ├── robots.ts
+│   │   ├── manifest.ts
+│   │   │
+│   │   ├── (marketing)/                 group: no app chrome
+│   │   │   └── about/page.tsx
+│   │   │
+│   │   ├── (app)/                       group: main app chrome
+│   │   │   ├── layout.tsx
+│   │   │   ├── 3x3/
+│   │   │   │   ├── page.tsx                       puzzle hub
+│   │   │   │   └── [method]/                      /3x3/cfop
+│   │   │   │       ├── page.tsx                   method overview
+│   │   │   │       └── [set]/                     /3x3/cfop/pll
+│   │   │   │           ├── page.tsx               grid of cases
+│   │   │   │           └── [case]/                /3x3/cfop/pll/t-perm
+│   │   │   │               ├── page.tsx           case detail (RSC + hydrated visualizer)
+│   │   │   │               └── opengraph-image.tsx  dynamic OG
+│   │   │   ├── timer/page.tsx
+│   │   │   ├── search/page.tsx
+│   │   │   └── me/
+│   │   │       ├── layout.tsx           auth gate
+│   │   │       └── algorithms/page.tsx  TanStack Table + virtual
+│   │   │
+│   │   ├── (auth)/
+│   │   │   └── login/page.tsx
+│   │   │
+│   │   ├── embed/
+│   │   │   └── visualizer/page.tsx      iframe variant — no chrome
+│   │   │
+│   │   └── api/
+│   │       └── auth/[...nextauth]/route.ts        Auth.js handler
+│   │
+│   ├── components/
+│   │   ├── ui/                          shadcn primitives (Button, Input, Table, Dialog, …)
+│   │   ├── data-table/                  reusable shadcn-skinned TanStack Table wrapper
+│   │   ├── form/                        shadcn-skinned TanStack Form field components
+│   │   ├── layout/                      Header, Footer, NavRail, ThemeToggle
+│   │   ├── algorithm/                   AlgorithmNotation, CaseCard, SetGrid, RecognitionCard
+│   │   ├── cube/                        client wrappers over packages/visualizer
+│   │   ├── timer/                       Timer, ScrambleDisplay, TimesList
+│   │   ├── search/                      SearchInput, ResultList, CommandPalette
+│   │   └── progress/                    LearnedBadge, MasteryDial
+│   │
+│   ├── features/
+│   │   ├── catalog/{api.ts, queries.ts}              TanStack Query keys + options
+│   │   ├── auth/{auth-options.ts, session.ts, current-user.ts}
+│   │   ├── me/
+│   │   │   ├── api.ts
+│   │   │   ├── hooks.ts                              useMyAlgorithms, useUpdateAlgorithm
+│   │   │   └── tables/algorithms-table.tsx          TanStack Table column defs + virtualized rows
+│   │   ├── timer/store.ts                            TanStack Store state machine
+│   │   ├── scramble/api.ts
+│   │   └── search/api.ts                             pacer-debounced fetcher
+│   │
+│   ├── lib/
+│   │   ├── api-client.ts                fetch wrapper, auth header, error mapping
+│   │   ├── env.ts                       client/server env loader (zod)
+│   │   ├── cn.ts                        tailwind-merge + clsx helper
+│   │   ├── seo.ts                       generateMetadata helpers
+│   │   ├── jsonld.ts                    schema.org/HowTo helpers
+│   │   └── format.ts
+│   │
+│   ├── providers/
+│   │   ├── query-provider.tsx           TanStack Query + devtools
+│   │   ├── theme-provider.tsx
+│   │   └── analytics-provider.tsx
+│   │
+│   ├── styles/                          (if more than globals.css)
+│   │   └── tokens.css
+│   │
+│   ├── types/shared.ts                  re-export from packages/shared
+│   │
+│   └── instrumentation.ts               Sentry + pino server-side init
+│
+├── tests/                               unit / component
+├── e2e/                                 Playwright
+├── .storybook/{main.ts, preview.tsx}
+├── components.json                      shadcn CLI config
+├── next.config.ts
+├── tsconfig.json
+├── vitest.config.ts
+└── package.json
+```
+
+### 19.3 Routing and rendering strategy
+
+- **Default: Server Components.** Catalog pages are SSG with `revalidate = 600` and on-demand revalidation when content changes.
+- **Client Components only where needed:** visualizer, timer, command palette, mutation forms. Lazy-loaded.
+- **`/me/*`** are Server Components that read session and forward JWT to api server-side; mutations inside use TanStack Query.
+- **`/embed/visualizer`** is its own minimal layout, sized via `postMessage` from host pages.
+- **Route groups** (`(app)`, `(auth)`, `(marketing)`) carry different layouts without affecting URLs.
+- **Typed routes** via `experimental.typedRoutes` — `Link href` is type-checked.
+
+### 19.4 Data fetching pattern
+
+- **Server Components** call api directly via typed `apiClient` (reads cookie/service token server-side). No JS shipped.
+- **Client Components** that need server state use TanStack Query, hydrated with `<HydrationBoundary>` from RSC.
+- All response types come from `packages/shared` zod schemas — schema mismatch is a build error.
+- `apiClient` retries once on 401 by hitting `/v1/auth/refresh` server-side, then surfaces the error.
+
+### 19.5 Auth on web
+
+- Auth.js v5 with **Google provider only**.
+- `signIn` callback POSTs Google ID token to api `/v1/auth/google`; api returns access + refresh JWTs.
+- Web stores api access JWT in httpOnly, Secure, SameSite=Lax cookie. Auth.js session cookie also set so `useSession()` works.
+- `getCurrentUser()` server helper used by Server Components and the `/me/*` layout's auth gate.
+- Sign-out clears both cookies and POSTs `/v1/auth/logout` to api.
+
+### 19.6 Visualizer integration
+
+- Source in `packages/visualizer`. Web imports `<Visualizer/>` via `next/dynamic` with `ssr: false` — three.js never runs on the server.
+- `<CubeVisualizer/>` (web wrapper) handles props normalization + suspense fallback (a static SVG of the start state).
+- For the **set grid** (e.g., 21 PLLs on one page), web renders **SVG sticker diagrams** as Server Components — zero hydration cost. Only the case detail page hydrates 3D.
+
+### 19.7 Styling and design system
+
+- Tailwind v4 — `@theme` in `globals.css` defines tokens (colors, fonts, spacing, radii, shadows). No `tailwind.config.ts`.
+- Light + dark via CSS custom props + `prefers-color-scheme` + manual toggle.
+- shadcn/ui owned in `components/ui/`. Customize freely; no external version lock.
+- Notation in JetBrains Mono; UI in Inter — both via `next/font/google`.
+
+### 19.8 SEO and structured data
+
+- `generateMetadata({ params })` per route emits title/description/canonical/OG.
+- Case page emits JSON-LD `schema.org/HowTo` (steps = moves) for rich Google results.
+- `app/sitemap.ts` calls api `/v1/sitemap` (URL list from catalog tree) at build.
+- `app/robots.ts` allows everything except `/embed/*` and `/me/*`.
+- Per-case dynamic OG image via `opengraph-image.tsx` — renders the cube state.
+
+### 19.9 Performance budget
+
+- LCP < 2.5s on 4G; CLS < 0.1; INP < 200ms.
+- Non-visualizer JS budget: <200kb gzipped.
+- Visualizer chunk: lazy, ~200kb additional, only on case pages.
+- Bitmap images via `next/image`; fonts self-hosted; edge runtime where it pays (sitemap, robots).
+- `@next/bundle-analyzer` on `ANALYZE=1`.
+
+### 19.10 Testing
+
+- **Component:** Vitest + Testing Library. Mocks for `next/navigation`, `next/headers`. Fixtures shared with api.
+- **E2E:** Playwright — `browse → case → sign in → mark learned → see in /me`; timer; search; embed iframe sizing.
+- **Visual:** Storybook for `CubeVisualizer`, `CaseCard`, `SetGrid`, `data-table`. Snapshots in CI on `main` / labeled PRs.
+- **Accessibility:** axe checks in Playwright; reduced-motion variant covered.
+
+### 19.11 Observability
+
+- `@sentry/nextjs` with source maps; client + server errors captured.
+- `instrumentation.ts` initializes pino server-side for request logs (matches api log shape).
+- Web Vitals reported to analytics provider.
