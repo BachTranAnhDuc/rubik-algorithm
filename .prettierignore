@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.vitepress/dist/
+.vitepress/cache/
+coverage/
+playwright-report/
+test-results/
+
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# Third-party / external tooling
+.claude/
+.mcp.json
+
+# Handcrafted design docs (preserve intentional formatting)
+docs/plans/
