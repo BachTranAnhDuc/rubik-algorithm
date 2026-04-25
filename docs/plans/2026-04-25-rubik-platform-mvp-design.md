@@ -649,7 +649,7 @@ Out of band: OpenTelemetry spans → Grafana Cloud
 
 Detailed structure for the Next.js frontend: libraries, folder layout, routing/rendering, data fetching, auth, visualizer integration, styling, SEO, performance, testing.
 
-UI is **shadcn/ui first**, state and data are **TanStack-first** wherever the ecosystem has a fit.
+UI is **shadcn/ui first**. TanStack libraries are picked **per-merit, not per-ecosystem**: kept where they're best-in-class (Query, Table, Virtual, Pacer); rejected where a more mature alternative wins (Zustand for client state, React Hook Form for forms — the latter being shadcn's officially documented form library).
 
 ### 19.1 Library inventory
 
@@ -665,9 +665,9 @@ UI is **shadcn/ui first**, state and data are **TanStack-first** wherever the ec
 | Command palette | `cmdk` | shadcn-recommended; no TanStack equivalent. |
 | **Tables** | **`@tanstack/react-table` v8** | Headless, type-safe; rendered through shadcn `<Table>` skin. Used on `/me/algorithms`, `/search`, future admin. |
 | **Virtualization** | **`@tanstack/react-virtual`** | Long lists (algorithm sheet at scale, search results, future trainer history). |
-| **Forms** | **`@tanstack/react-form`** + zod adapter | Type-safe form state; reuses `packages/shared` zod schemas. Replaces react-hook-form for ecosystem consistency. |
+| **Forms** | **`react-hook-form`** + `@hookform/resolvers/zod` | shadcn's `<Form>` is officially built on RHF; copy-paste-ready. Maturity (~7M weekly downloads, 6+ years) decisive over TanStack Form for our flat, simple forms. Reuses `packages/shared` zod schemas. |
 | **Server state** | **`@tanstack/react-query` v5** (+ devtools) | Used for client-side mutations (`/me/*`); RSC handles most reads with `<HydrationBoundary>` for handoff. |
-| **Client state / state machines** | **`@tanstack/store`** + `@tanstack/react-store` | Timer state machine + visualizer playback controls. |
+| **Client state / state machines** | **`zustand`** v5 (with `persist`, `devtools` middleware) | Timer state machine + visualizer playback controls. Picked over TanStack Store on maturity (~5M weekly downloads, 4+ years), middleware ecosystem (persist for localStorage of times history is one line), and Redux DevTools support. |
 | **Debounce/throttle** | **`@tanstack/react-pacer`** | Palette and `/search` input. |
 | Auth (web side) | Auth.js v5 (`next-auth`) | Google OAuth handshake; POSTs Google ID token to api `/v1/auth/google`, receives api JWTs, sets httpOnly cookies. Api remains source of truth. |
 | Validation | `zod` (shared) | Same schemas as api. End-to-end type safety. |
@@ -739,7 +739,7 @@ apps/web/
 │   ├── components/
 │   │   ├── ui/                          shadcn primitives (Button, Input, Table, Dialog, …)
 │   │   ├── data-table/                  reusable shadcn-skinned TanStack Table wrapper
-│   │   ├── form/                        shadcn-skinned TanStack Form field components
+│   │   ├── form/                        shadcn `<Form>` (built on react-hook-form) field components
 │   │   ├── layout/                      Header, Footer, NavRail, ThemeToggle
 │   │   ├── algorithm/                   AlgorithmNotation, CaseCard, SetGrid, RecognitionCard
 │   │   ├── cube/                        client wrappers over packages/visualizer
@@ -754,7 +754,7 @@ apps/web/
 │   │   │   ├── api.ts
 │   │   │   ├── hooks.ts                              useMyAlgorithms, useUpdateAlgorithm
 │   │   │   └── tables/algorithms-table.tsx          TanStack Table column defs + virtualized rows
-│   │   ├── timer/store.ts                            TanStack Store state machine
+│   │   ├── timer/store.ts                            zustand store + persist middleware
 │   │   ├── scramble/api.ts
 │   │   └── search/api.ts                             pacer-debounced fetcher
 │   │
