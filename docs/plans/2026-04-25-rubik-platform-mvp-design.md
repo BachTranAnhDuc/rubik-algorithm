@@ -445,3 +445,202 @@ apps/docs/
 - Main site footer gets a "Docs" link to the VitePress site.
 - VitePress nav links back to the main site landing.
 - No shared build pipeline — loose URLs only. This is intentional: keeps the docs site simple and decoupled.
+
+## 18. API deep structure (`apps/api`)
+
+Detailed structure for the NestJS API: libraries, folder layout, module principles, cross-cutting patterns, and the request lifecycle.
+
+### 18.1 Library inventory
+
+| Concern | Pick | Rationale |
+|---|---|---|
+| HTTP adapter | `@nestjs/platform-express` | Largest plugin/middleware ecosystem; Fastify adapter rejected (perf we don't need, smaller middleware pool). |
+| Config + env | `@nestjs/config` + **zod** | Validate env at boot via zod schema; fail fast on missing/invalid vars. |
+| Validation | **zod** + **nestjs-zod** | Schemas live in `packages/shared` and are shared with web; type = schema. Bridges to Swagger. Rejected `class-validator` (no monorepo schema sharing). |
+| OpenAPI | `@nestjs/swagger` + `nestjs-zod` | Auto-generates OpenAPI 3.1; Swagger UI in non-prod; `openapi.json` emitted for docs site. |
+| ORM | `prisma`, `@prisma/client`, **`nestjs-prisma`** | Locked. `nestjs-prisma` provides clean module + lifecycle. |
+| Auth — Google verify | **`google-auth-library`** | First-party. Replaces unmaintained passport-google-id-token. |
+| Auth — JWT | `@nestjs/jwt` + `@nestjs/passport` + `passport-jwt` | Standard NestJS auth stack with `JwtAuthGuard` + `JwtStrategy`. |
+| Cookies | `cookie-parser` | Read httpOnly auth cookies. |
+| Cache | `@nestjs/cache-manager` + `cache-manager` + `cache-manager-redis-yet` | Redis-backed Nest cache abstraction. |
+| Rate limiting | `@nestjs/throttler` (Redis storage) | Per-IP and per-user across instances. |
+| Health | `@nestjs/terminus` | `/healthz` liveness + `/readyz` readiness with Postgres/Redis pings. |
+| Logging | **`nestjs-pino`** | Structured JSON, request-scoped logger with request ID, fast. |
+| Tracing/metrics | `@opentelemetry/sdk-node` + auto-instrumentations | HTTP/Prisma/Redis spans; OTLP to Grafana Cloud. |
+| Errors | `@sentry/node` + `@sentry/profiling-node` | Error sink + APM via global exception filter. |
+| Security headers | `helmet` | Standard. |
+| Compression | `compression` | Gzip responses. |
+| Cron | `@nestjs/schedule` | Refresh-token cleanup, cache warm-up. |
+| Date/time | `dayjs` | Tiny, sane API. |
+| IDs | `cuid2` (or Prisma default `cuid`) | Short, sortable, URL-safe. |
+| HTTP testing | `supertest` | Standard. |
+| Test containers | `testcontainers` | Real Postgres + Redis in integration tests. |
+| Test runner | `vitest` | Same runner across the monorepo. |
+| Dev runner | `tsx` (or `nest start --watch`) | Fast TS execution with watch. |
+
+### 18.2 Folder structure
+
+```
+apps/api/
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts                         ingest content/*.yaml → DB
+├── src/
+│   ├── main.ts                         OTel init, Nest bootstrap, global pipes/filters
+│   ├── app.module.ts                   Root composition
+│   │
+│   ├── common/                         Cross-cutting (no domain logic)
+│   │   ├── decorators/
+│   │   │   ├── current-user.decorator.ts
+│   │   │   ├── public.decorator.ts            opt-out of JwtAuthGuard
+│   │   │   └── api-paginated.decorator.ts
+│   │   ├── filters/
+│   │   │   └── all-exceptions.filter.ts       uniform error JSON
+│   │   ├── guards/
+│   │   │   └── jwt-auth.guard.ts
+│   │   ├── interceptors/
+│   │   │   ├── logging.interceptor.ts
+│   │   │   └── cache.interceptor.ts
+│   │   ├── pipes/
+│   │   │   └── zod-validation.pipe.ts         from nestjs-zod
+│   │   ├── dtos/
+│   │   │   ├── pagination.dto.ts
+│   │   │   └── error.dto.ts
+│   │   └── utils/
+│   │
+│   ├── infra/                          Infrastructure modules (mostly @Global)
+│   │   ├── config/
+│   │   │   ├── config.module.ts
+│   │   │   ├── env.schema.ts                  zod env schema
+│   │   │   └── config.service.ts
+│   │   ├── prisma/
+│   │   │   ├── prisma.module.ts
+│   │   │   └── prisma.service.ts
+│   │   ├── cache/
+│   │   │   ├── cache.module.ts
+│   │   │   └── cache.service.ts
+│   │   ├── logger/
+│   │   │   └── logger.module.ts               nestjs-pino wired here
+│   │   ├── throttler/
+│   │   │   └── throttler.module.ts            Redis-backed
+│   │   └── telemetry/
+│   │       ├── telemetry.module.ts
+│   │       ├── tracing.ts                     OTel SDK init
+│   │       └── sentry.ts
+│   │
+│   └── modules/                        Feature (domain) modules
+│       ├── auth/
+│       │   ├── auth.module.ts
+│       │   ├── auth.controller.ts             POST /v1/auth/{google,refresh,logout}
+│       │   ├── auth.service.ts
+│       │   ├── strategies/jwt.strategy.ts
+│       │   ├── google/google-verifier.service.ts
+│       │   ├── dto/{google-login.dto.ts, token-pair.dto.ts}
+│       │   └── __tests__/auth.service.spec.ts
+│       │
+│       ├── users/
+│       │   ├── users.module.ts
+│       │   ├── users.service.ts
+│       │   └── users.repository.ts             Prisma access for User
+│       │
+│       ├── catalog/                            Read-mostly hierarchy
+│       │   ├── catalog.module.ts               aggregates submodules
+│       │   ├── puzzles/{puzzles.module.ts, puzzles.controller.ts, puzzles.service.ts}
+│       │   ├── methods/...
+│       │   ├── sets/...
+│       │   └── cases/...
+│       │
+│       ├── scramble/
+│       │   ├── scramble.module.ts
+│       │   ├── scramble.controller.ts          GET /v1/scramble, /v1/scramble/case/:id
+│       │   └── scramble.service.ts             uses cube-core from packages/
+│       │
+│       ├── search/
+│       │   ├── search.module.ts
+│       │   ├── search.controller.ts
+│       │   └── search.service.ts               Postgres FTS + trigram in v1
+│       │
+│       ├── me/
+│       │   ├── me.module.ts
+│       │   ├── me.controller.ts                GET/PUT/DELETE /v1/me/*
+│       │   ├── me.service.ts
+│       │   └── dto/update-algorithm.dto.ts
+│       │
+│       └── health/
+│           ├── health.module.ts
+│           └── health.controller.ts            /healthz, /readyz
+│
+├── test/
+│   ├── integration/
+│   │   ├── auth.integration.spec.ts
+│   │   ├── catalog.integration.spec.ts
+│   │   ├── me.integration.spec.ts
+│   │   └── scramble.integration.spec.ts
+│   ├── contract/
+│   │   └── openapi.snapshot.spec.ts            pin OpenAPI shape
+│   ├── e2e/                                    optional; mostly handled by web/e2e
+│   ├── fixtures/seed-test.ts
+│   └── helpers/{app-factory.ts, test-containers.ts}
+│
+├── Dockerfile                          multi-stage
+├── nest-cli.json
+├── tsconfig.json
+├── tsconfig.build.json
+├── package.json
+└── openapi.json                        emitted at build, consumed by docs site
+```
+
+### 18.3 Module organization principles
+
+- **One Nest module per top-level resource.** Module boundary = REST resource boundary = directory boundary. No circular module imports.
+- **`infra/*` modules are global** (`@Global()` where appropriate) — injectable anywhere without re-importing. Keeps feature modules clean.
+- **`common/*` has no DI scope** — pure utilities, decorators, filters, pipes.
+- **Catalog uses a parent module + four submodules** so puzzles/methods/sets/cases share fixtures and tests but stay individually testable.
+- **Layered per module:** Controller (HTTP shape) → Service (domain logic) → Repository (data access). Repository is **optional** — trivial CRUD reads call Prisma directly from the service. Add a repository only when there's reusable query logic or tests need to mock the data layer.
+
+### 18.4 Cross-cutting patterns
+
+- **Validation.** A single global `ZodValidationPipe` from `nestjs-zod`. Schemas live in `packages/shared/schemas/`. nestjs-zod auto-generates Swagger entries. Zero DTO duplication.
+- **Auth flow.** Web does OAuth → POSTs Google ID token to `/v1/auth/google` → `GoogleVerifierService` validates signature/`aud`/`iss`/`exp` → `AuthService` upserts User, mints `{access 15m, refresh 30d}` → web stores in httpOnly cookies. Subsequent requests carry access JWT; `JwtAuthGuard` is global (`APP_GUARD`); routes opt out via `@Public()`. `@CurrentUser()` extracts user from request.
+- **Caching.** Two layers: HTTP `Cache-Control: public, s-maxage=600` on reads (Cloudflare CDN does most of the work) + `@nestjs/cache-manager` Redis backend for cache-miss recovery in-process. Cache keys content-hash-suffixed — invalidation = bump the seed hash on content changes.
+- **Errors.** Global `AllExceptionsFilter` returns `{ error: { code, message, details? }, requestId }`. Domain exceptions (`CaseNotFoundException`, `AlreadyLearnedException`) extend `HttpException` with stable error codes. Sentry captures 5xx with Pino breadcrumbs.
+- **Logging.** `nestjs-pino` — pretty transport in dev, JSON in prod. Each request has a `requestId` (generated or read from `x-request-id`). `LoggingInterceptor` logs `method path status durationMs userId?` once per request.
+- **Rate limiting.** `@nestjs/throttler` with Redis storage. Defaults: 60 req/min/IP public, 120 req/min/user authed, 10 req/min/IP on `/v1/auth/*`. Override per-controller with `@Throttle()`.
+- **Observability.** OpenTelemetry SDK initialized **before** Nest bootstrap in `main.ts` so auto-instrumentation activates during DI. OTLP export to Grafana Cloud. Sentry alongside for errors + transactions.
+- **Health.** Terminus `/healthz` (process up) + `/readyz` (Postgres + Redis pings). Fly.io health-check points at `/readyz` with 5s timeout.
+- **Versioning.** `app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })`. All controllers `@Controller({ path: '…', version: '1' })`. v2 can coexist later.
+- **OpenAPI.** `@nestjs/swagger` + `nestjs-zod`. Swagger UI at `/v1/docs` only when `NODE_ENV !== 'production'`. `pnpm --filter api openapi:emit` writes `openapi.json` at build for VitePress docs site to render.
+
+### 18.5 Request lifecycle
+
+```
+client
+  │
+  ▼  HTTPS (Cloudflare) ──────── public GET? cache hit ──► return
+  │                          miss
+  ▼
+api.fly.io
+  │
+  ├─ helmet + compression + cookie-parser (Express middleware)
+  ├─ ThrottlerGuard (Redis counters)
+  ├─ JwtAuthGuard (unless @Public)
+  ├─ ZodValidationPipe (body, params, query)
+  ├─ LoggingInterceptor (start)
+  ├─ CacheInterceptor (Redis lookup for marked routes)
+  │
+  ▼
+Controller → Service → (Repository) → Prisma → Postgres
+  │                                          ↘ Redis
+  ▼
+ResponseSerializer (Nest default + nestjs-zod)
+LoggingInterceptor (end, log line)
+AllExceptionsFilter (only if thrown)
+  │
+  ▼
+client ◄── JSON  (+ optional Set-Cookie for auth)
+
+Out of band: OpenTelemetry spans → Grafana Cloud
+            Sentry breadcrumbs/errors → Sentry
+            pino log lines (stdout) → Fly log shipper → Grafana Loki
+```
