@@ -1116,3 +1116,310 @@ packages/shared/
 - **web** + **api** consume the leaves they need.
 - Turborepo task graph respects this; `turbo run build` builds leaves first.
 - **Api never imports visualizer** — server has no need to render. Keeps the api Docker image lean.
+
+## 21. Database schema (Prisma)
+
+Concrete `prisma/schema.prisma`, indexes, raw SQL for FTS + trigram, seed strategy, and dev workflow. Eight tables in v1: `puzzles`, `methods`, `algorithm_sets`, `algorithm_cases`, `algorithm_variants`, `users`, `user_algorithms`, `refresh_tokens`.
+
+### 21.1 Entity overview
+
+```
+Puzzle ──▶ Method ──▶ AlgorithmSet ──▶ AlgorithmCase ──▶ AlgorithmVariant
+                                            ▲                  ▲
+                                            │                  │ chosenVariantId
+                                            └── UserAlgorithm ── User ──▶ RefreshToken
+```
+
+### 21.2 `prisma/schema.prisma` (complete)
+
+```prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres", "relationJoins"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  // bypasses the pooler for migrations on Neon
+}
+
+// ============================================================
+// Catalog: Puzzle → Method → Set → Case → Variant
+// ============================================================
+
+model Puzzle {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  wcaEventCode        String?
+  displayOrder        Int      @default(0)
+  stateSchemaVersion  String   @default("v1")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  methods Method[]
+
+  @@map("puzzles")
+}
+
+model Method {
+  id             String   @id @default(cuid())
+  puzzleId       String
+  slug           String
+  name           String
+  descriptionMd  String?
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  puzzle Puzzle         @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+  sets   AlgorithmSet[]
+
+  @@unique([puzzleId, slug])
+  @@index([puzzleId, displayOrder])
+  @@map("methods")
+}
+
+enum RecognitionBasis {
+  LAST_LAYER
+  F2L_SLOT
+  OLL_ORIENTATION
+  PLL_PERMUTATION
+  CROSS
+  OTHER
+}
+
+model AlgorithmSet {
+  id                 String           @id @default(cuid())
+  methodId           String
+  slug               String
+  name               String
+  caseCountExpected  Int
+  recognitionBasis   RecognitionBasis
+  displayOrder       Int              @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  method Method          @relation(fields: [methodId], references: [id], onDelete: Cascade)
+  cases  AlgorithmCase[]
+
+  @@unique([methodId, slug])
+  @@index([methodId, displayOrder])
+  @@map("algorithm_sets")
+}
+
+model AlgorithmCase {
+  id              String   @id @default(cuid())
+  setId           String
+  slug            String
+  name            String
+  displayName     String
+  displayOrder    Int      @default(0)
+  caseState       String   // 54-char sticker string (face order UFRDLB)
+  recognitionMd   String?
+  tags            String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  set            AlgorithmSet       @relation(fields: [setId], references: [id], onDelete: Cascade)
+  variants       AlgorithmVariant[]
+  userAlgorithms UserAlgorithm[]
+
+  @@unique([setId, slug])
+  @@index([setId, displayOrder])
+  @@index([tags], type: Gin)
+  // search_vector tsvector + GIN index added via raw migration (see §21.3)
+  @@map("algorithm_cases")
+}
+
+model AlgorithmVariant {
+  id             String   @id @default(cuid())
+  caseId         String
+  notation       String
+  moveCountHtm   Int
+  moveCountStm   Int
+  isPrimary      Boolean  @default(false)
+  attribution    String?
+  fingertrickMd  String?
+  displayOrder   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  case             AlgorithmCase   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  chosenByUserAlgs UserAlgorithm[] @relation("UserAlgorithm_chosenVariant")
+
+  @@index([caseId, displayOrder])
+  @@map("algorithm_variants")
+}
+
+// ============================================================
+// Users + Auth
+// ============================================================
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  displayName String?
+  googleSub   String    @unique
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  algorithms    UserAlgorithm[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+enum LearningStatus {
+  LEARNING
+  LEARNED
+  MASTERED
+}
+
+model UserAlgorithm {
+  userId          String
+  caseId          String
+  chosenVariantId String?
+  status          LearningStatus @default(LEARNING)
+  personalNotesMd String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  case          AlgorithmCase     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  chosenVariant AlgorithmVariant? @relation("UserAlgorithm_chosenVariant", fields: [chosenVariantId], references: [id], onDelete: SetNull)
+
+  @@id([userId, caseId])
+  @@index([userId, status])
+  @@map("user_algorithms")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique  // SHA-256 of raw token; raw is never stored
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("refresh_tokens")
+}
+```
+
+### 21.3 Raw SQL migration for FTS + trigram
+
+Prisma doesn't model `tsvector` or `pg_trgm` natively. Add them in `prisma/migrations/<timestamp>_add_fts/migration.sql` (after the auto-generated DDL):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Generated tsvector column on algorithm_cases (no triggers needed)
+ALTER TABLE algorithm_cases
+  ADD COLUMN search_vector tsvector
+  GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(display_name, '')), 'A') ||
+    setweight(to_tsvector('english', array_to_string(tags, ' ')), 'B') ||
+    setweight(to_tsvector('english', coalesce(recognition_md, '')), 'C')
+  ) STORED;
+
+CREATE INDEX algorithm_cases_search_vector_idx
+  ON algorithm_cases USING GIN (search_vector);
+
+-- Trigram for fuzzy "T per..." → "T-Perm" matching
+CREATE INDEX algorithm_cases_name_trgm_idx
+  ON algorithm_cases USING GIN (name gin_trgm_ops);
+CREATE INDEX algorithm_cases_display_name_trgm_idx
+  ON algorithm_cases USING GIN (display_name gin_trgm_ops);
+```
+
+`SearchService` queries via `$queryRaw` blending `ts_rank_cd(search_vector, ...) + similarity(name, q)` for relevance, with trigram indexes handling typo tolerance.
+
+### 21.4 Index summary
+
+| Table | Index | Purpose |
+|---|---|---|
+| `puzzles` | `slug` unique | URL routing `/3x3/...` |
+| `methods` | `(puzzleId, slug)` unique | URL routing `/3x3/cfop/...` |
+| `methods` | `(puzzleId, displayOrder)` | Ordered list on puzzle hub |
+| `algorithm_sets` | `(methodId, slug)` unique | URL routing `.../cfop/pll/...` |
+| `algorithm_sets` | `(methodId, displayOrder)` | Ordered list on method page |
+| `algorithm_cases` | `(setId, slug)` unique | URL routing `.../pll/t-perm` |
+| `algorithm_cases` | `(setId, displayOrder)` | Set grid ordering |
+| `algorithm_cases` | `tags` GIN | Tag-filter queries |
+| `algorithm_cases` | `search_vector` GIN | Full-text search |
+| `algorithm_cases` | `name`, `display_name` GIN trgm | Fuzzy/typo search |
+| `algorithm_variants` | `(caseId, displayOrder)` | Ordered variants list |
+| `users` | `email` unique | Login lookup |
+| `users` | `googleSub` unique | OAuth identity |
+| `user_algorithms` | `(userId, caseId)` PK | Single status per user/case |
+| `user_algorithms` | `(userId, status)` | "Show my learned algs" |
+| `refresh_tokens` | `tokenHash` unique | Token verification |
+| `refresh_tokens` | `(userId, expiresAt)` | Cleanup + per-user listing |
+
+### 21.5 Extensions
+
+- `pg_trgm` — trigram fuzzy match for search.
+- Built-in `english` text-search dictionary — no extension needed.
+
+### 21.6 Connection pooling
+
+- **Prod:** Neon's pooled connection string in `DATABASE_URL`; direct (unpooled) URL in `DIRECT_URL` for migrations. Prisma respects both via `datasource.directUrl`.
+- **Local:** plain `postgresql://...@localhost:5432/rubik` — no pooler.
+- For high-concurrency batch jobs (e.g., content seed): use `?pgbouncer=true&connection_limit=1` on the pooled URL, or run against `DIRECT_URL`.
+
+### 21.7 Seed strategy
+
+`prisma/seed.ts` is the bridge from git-versioned YAML content to the database:
+
+1. Read `content/puzzles/3x3/methods/cfop/sets/{f2l,oll,pll}/cases/*.yaml`.
+2. Validate each file against the zod schema in `packages/shared/schemas/puzzle.ts`. Bad content fails the seed — does not silently corrupt the DB.
+3. Upsert in dependency order: Puzzle → Method → Set → Case → Variant.
+4. Idempotent — re-running converges to the same DB state. Cases/variants no longer present in YAML are **flagged**, not deleted (deletion requires explicit `--prune`).
+
+Wired via `package.json`:
+
+```json
+{
+  "prisma": { "seed": "tsx prisma/seed.ts" }
+}
+```
+
+### 21.8 Dev workflow (Makefile targets)
+
+| Command | What it does |
+|---|---|
+| `make db.migrate` | `prisma migrate dev` — create + apply a new migration locally |
+| `make db.deploy` | `prisma migrate deploy` — apply pending migrations (CI/prod) |
+| `make db.reset` | `prisma migrate reset` — drop + recreate + reseed local DB |
+| `make db.seed` | `prisma db seed` — re-run YAML → DB ingest |
+| `make db.studio` | `prisma studio` — DB GUI |
+| `make db.format` | `prisma format` — canonicalize the schema file |
+
+CI runs `prisma migrate deploy` in a one-shot Fly machine before traffic flips; gated by approval for prod.
+
+### 21.9 Cascade and lifecycle rules
+
+- **No soft delete in v1.** Hard delete with cascade. Deleting a user removes their `UserAlgorithm` and `RefreshToken` rows.
+- **Catalog cascades** (Puzzle → Method → Set → Case → Variant) are wired with `onDelete: Cascade` so removing a puzzle cleans up downstream — but in practice nothing is deleted from the catalog except via the explicit `--prune` seed flag.
+- **`UserAlgorithm.chosenVariantId`** is `onDelete: SetNull` — if a variant is removed, the user's preference reverts to "no preference," not the whole row gone.
+
+### 21.10 Deliberately not modeled in v1
+
+| Not modeled | Why |
+|---|---|
+| Trainer sessions / drill history | v2 (Trainer feature). |
+| Solver-generated solutions | v2 (Solver feature). |
+| Public profiles / social | v2. |
+| Tags as a separate table | v1 uses `String[]` array; tags don't yet need their own metadata/admin. Migrate to a table when we want tag pages. |
+| Audit log | v1 doesn't need it. App-level structured logs cover the audit trail. |
+| Multiple OAuth providers per user | v1 is Google-only; `User.googleSub` is sufficient. v2: extract to a `UserIdentity` table. |
+| Localization | v1 is English. v2: add `*_translations` tables or a JSONB locale column. |
