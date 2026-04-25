@@ -3,6 +3,10 @@
 // Types
 export type { Move, MoveAxis, MoveAmount, Algorithm, State, Face } from './types'
 
+// Puzzle abstraction
+export type { Puzzle, ScrambleOptions } from './puzzle/puzzle.interface'
+export { Puzzle3x3 } from './puzzle/puzzle-3x3'
+
 // State
 export {
   SOLVED_STATE,
