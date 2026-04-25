@@ -1,0 +1,122 @@
+[
+  {
+    "seed": 1,
+    "scramble": "B L' D2 R2 L2 F D F R D F2 R D2 B' D' F' L R D2 U' B D B' D' R2",
+    "state": "RRLLUBRFULLFFFLDUDBDBBRDUURBFFBDFURDDUBBLRFRLLUFLBDUDR",
+    "solution": "R2 D B D' B' U D2 R' L' F D B D2 R' F2 D' R' F' D' F' L2 R2 D2 L B'"
+  },
+  {
+    "seed": 7,
+    "scramble": "U L' B2 F R U' B F D' L U D2 R L2 B' L2 R D2 F U' F2 L' R F U'",
+    "state": "UBLUUFFDDDLFFFLRRLRBUURFUBFBBRUDLUFDLRFRLDBDDRUBDBRBLL",
+    "solution": "U F' R' L F2 U F' D2 R' L2 B L2 R' D2 U' L' D F' B' U R' F' B2 L U'"
+  },
+  {
+    "seed": 13,
+    "scramble": "B2 U F2 L2 R U2 F2 B U' F D U L2 R F R B D2 U L D' U L' R F",
+    "state": "DFFDUBBLRFRRDFLBBLDUDFRFBBLLRUDDLFDRUFLULRULBRBDRBUFUU",
+    "solution": "F' R' L U' D L' U' D2 B' R' F' R' L2 U' D' F' U B' F2 U2 R' L2 F2 U' B2"
+  },
+  {
+    "seed": 42,
+    "scramble": "B2 L' D2 B' F L' D B' U2 L B D R2 U L2 R F U2 B D R' B D U2 R'",
+    "state": "FBUFUUBFULUFRFBDLLUFRDRDUULDRBLDBFDDFRDDLRBUBRFRLBLRBL",
+    "solution": "R U2 D' B' R D' B' U2 F' R' L2 U' R2 D' B' L' U2 B D' L F' B D2 L B2"
+  },
+  {
+    "seed": 100,
+    "scramble": "D B' R B D F' U2 D R2 L B' D L R2 F2 U2 F' L' U' D' F2 R' L U R",
+    "state": "RUBLULRBDFRFFFDRUDLDBRRDLLRUFFLDULFUFFBDLULRDDRUBBBBBU",
+    "solution": "R' U' L' R F2 D U L F U2 F2 R2 L' D' B L' R2 D' U2 F D' B' R' B D'"
+  },
+  {
+    "seed": 256,
+    "scramble": "L2 F' D2 R D2 L U F' L' B' U L B2 R' U2 F' B' R' F2 L U D2 R2 U2 F",
+    "state": "UBDFUUBRLBBUDFDBBBLDLRRRRLUFLFBDFFFDDDRULRRLFUULUBLRFD",
+    "solution": "F' U2 R2 D2 U' L' F2 R B F U2 R B2 L' U' B L F U' L' D2 R' D2 F L2"
+  },
+  {
+    "seed": 333,
+    "scramble": "U2 B F2 R U2 F' B2 U R F' B2 D F' R2 L B2 D' R2 F R2 U' L2 F' B2 L2",
+    "state": "ULBFUDFLUDULFFRBLRBFDLRBFFBRDUUDDRRUFULBLRFRLLDRUBBDBD",
+    "solution": "L2 B2 F L2 U R2 F' R2 D B2 L' R2 F D' B2 F R' U' B2 F U2 R' F2 B' U2"
+  },
+  {
+    "seed": 555,
+    "scramble": "F U2 B R2 D U2 L2 B' D U' B2 L2 F2 R' U2 F' R2 L' U' F2 L2 B U' F2 L",
+    "state": "BBRLUDBFLFRUDFDULLBBDURUFFLUFDUDUDLBRBRRLBLFUFRRRBLDDF",
+    "solution": "L' F2 U B' L2 F2 U L R2 F U2 R F2 L2 B2 U D' B L2 U2 D' R2 B' U2 F'"
+  },
+  {
+    "seed": 777,
+    "scramble": "R D B2 D' B' R' U' B' U' R' U2 R2 B' U2 D' F U2 F' L2 U' L' U' B L R'",
+    "state": "DRFLULRFUBBRUFDBBFBDUFRUURLUDLBDDLFBLLDULRFRRRUDLBFDBF",
+    "solution": "R L' B' U L U L2 F U2 F' D U2 B R2 U2 R U B U R B D B2 D' R'"
+  },
+  {
+    "seed": 1001,
+    "scramble": "U D2 L2 R2 U B2 L' B2 R' B2 D' B F' R' F' U2 F D R L2 B' L B2 F2 L",
+    "state": "ULLFUFFDDRBFBFRUUDDLFURBBRRLLRUDDLDLBRDDLRUURUFFBBFBLB",
+    "solution": "L' F2 B2 L' B L2 R' D' F' U2 F R F B' D B2 R B2 L B2 U' R2 L2 D2 U'"
+  },
+  {
+    "seed": 1234,
+    "scramble": "U' L' U R2 U2 D' B F2 U' L2 D2 B2 L' D B R' F2 U2 L' R U R U2 B2 D'",
+    "state": "RFUUURDLBFRLFFBRURLBUDRRBBLFLDDDDLUDDLRFLLURUFDBUBFFBB",
+    "solution": "D B2 U2 R' U' R' L U2 F2 R B' D' L B2 D2 L2 U F2 B' D U2 R2 U' L U"
+  },
+  {
+    "seed": 4242,
+    "scramble": "B L2 R D2 F2 R' B' F' L B D U F2 B2 L2 U' B' D' U' F2 R2 B' D' L F'",
+    "state": "BBDBULBRLFBUDFDDBBUFLDRFRUBRFRFDLDURURLULRLLFUDFLBUDRF",
+    "solution": "F L' D B R2 F2 U D B U L2 B2 F2 U' D' B' L' F B R F2 D2 R' L2 B'"
+  },
+  {
+    "seed": 9999,
+    "scramble": "D' R2 U D' B2 U2 F2 L R2 B2 R F L' R F2 L D2 B2 D2 B2 L2 F D B2 R2",
+    "state": "RDFFURFLDLFBLFFLRLBBRDRFRURLUBBDRDDUFRULLUBDDDLUUBBUBF",
+    "solution": "R2 B2 D' F' L2 B2 D2 B2 D2 L' F2 R' L F' R' B2 R2 L' F2 U2 B2 D U' R2 D"
+  },
+  {
+    "seed": 12345,
+    "scramble": "L F' B2 U' L' F' L' B F R' B' R2 F D R D B' F U' R B' L B' L2 D",
+    "state": "RURFUDUBFFFDLFLFDBRLLBRRBLULDBBDURRUURLFLDLRDBUDFBBFUD",
+    "solution": "D' L2 B L' B R' U F' B D' R' D' F' R2 B R F' B' L F L U B2 F L'"
+  },
+  {
+    "seed": 31337,
+    "scramble": "R B' U R' D' L R B2 R' L' U2 R' B' R' D L2 U R' F D2 U L U' F L'",
+    "state": "DUDUULLLLDBDDFLUFLLBRURRUFBRRBFDURBUBBFLLDFRBURFDBFRDF",
+    "solution": "L F' U L' U' D2 F' R U' L2 D' R B R U2 L R B2 R' L' D R U' B R'"
+  },
+  {
+    "seed": 65535,
+    "scramble": "F2 L2 F B' D B2 U B2 F' U' R' U2 L U' B U2 L U' F R2 U R2 L2 B' D2",
+    "state": "LURFUFULRDURDFRRLLBLBRRRFBDFDBLDRLFDLUBBLUUBUUFFDBBFDD",
+    "solution": "D2 B L2 R2 U' R2 F' U L' U2 B' U L' U2 R U F B2 U' B2 D' B F' L2 F2"
+  },
+  {
+    "seed": 100001,
+    "scramble": "B2 F2 R U' D2 F2 U D' B2 F R D' U R D B' F' U D2 L' R F2 U D F",
+    "state": "FLRLURDLBFUFFFRLBDRDUFRURFDFRBDDUUBRLBLDLDBLDUFURBBBUL",
+    "solution": "F' D' U' F2 R' L D2 U' F B D' R' U' D R' F' B2 D U' F2 D2 U R' F2 B2"
+  },
+  {
+    "seed": 222222,
+    "scramble": "D L U2 R' B' D R2 L D2 B2 U L' B' D2 B R2 B L2 F' B' U2 D2 R2 B2 U2",
+    "state": "LRRFUFDDLUDLLFFUUBBLFURBDLDRBUBDRLFFBRBDLDFLFRURBBUURD",
+    "solution": "U2 B2 R2 D2 U2 B F L2 B' R2 B' D2 B L U' B2 D2 L' R2 D' B R U2 L' D'"
+  },
+  {
+    "seed": 314159,
+    "scramble": "U2 F' R L F R B F' L F R2 L2 B2 R2 U B U' L' U2 R L' B' R2 U' B'",
+    "state": "FRLRULBDDBURFFBDDFRUFLRFDLDFRRDDFLLUBBRULFLBUUBUDBRBUL",
+    "solution": "B U R2 B L R' U2 L U B' U' R2 B2 L2 R2 F' L' F B' R' F' L' R' F U2"
+  },
+  {
+    "seed": 999999,
+    "scramble": "U2 F' D2 B' U2 R2 U L2 D2 R U' L D' F' U B' F R' D' U2 F' L U' D' R2",
+    "state": "FBLDURBURFBUFFDDRLUBBBRLUFRFFFLDURLDDRBDLFUURLLDDBUBRL",
+    "solution": "R2 D U L' F U2 D R F' B U' F D L' U R' D2 L2 U' R2 U2 B D2 F U2"
+  }
+]
