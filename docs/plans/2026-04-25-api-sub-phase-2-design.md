@@ -86,13 +86,21 @@ pnpm --filter @rubik/api prisma migrate dev --create-only --name add_fts
 ```sql
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- Postgres requires every function inside a STORED generated column to be
+-- IMMUTABLE. array_to_string() is STABLE, so we wrap it.
+CREATE OR REPLACE FUNCTION immutable_array_to_string(arr text[], sep text)
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE PARALLEL SAFE
+  RETURN array_to_string(arr, sep);
+
 ALTER TABLE algorithm_cases
   ADD COLUMN search_vector tsvector
   GENERATED ALWAYS AS (
     setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(display_name, '')), 'A') ||
-    setweight(to_tsvector('english', array_to_string(tags, ' ')), 'B') ||
-    setweight(to_tsvector('english', coalesce(recognition_md, '')), 'C')
+    setweight(to_tsvector('english', coalesce("displayName", '')), 'A') ||
+    setweight(to_tsvector('english', immutable_array_to_string(coalesce(tags, '{}'), ' ')), 'B') ||
+    setweight(to_tsvector('english', coalesce("recognitionMd", '')), 'C')
   ) STORED;
 
 CREATE INDEX algorithm_cases_search_vector_idx
@@ -102,7 +110,7 @@ CREATE INDEX algorithm_cases_name_trgm_idx
   ON algorithm_cases USING GIN (name gin_trgm_ops);
 
 CREATE INDEX algorithm_cases_display_name_trgm_idx
-  ON algorithm_cases USING GIN (display_name gin_trgm_ops);
+  ON algorithm_cases USING GIN ("displayName" gin_trgm_ops);
 ```
 
 Then `prisma migrate dev` applies it. Future `prisma migrate diff` runs will see the `search_vector` column as drift unless we tell it to ignore — Prisma's stance is that schema-modeled state is the source of truth, and raw-SQL state lives outside that. Acceptable per §21.3; revisit only if it becomes painful.
@@ -136,7 +144,7 @@ Testcontainers integration tests land in sub-phase 6 (per the parent plan); pull
 - [ ] `apps/api/.env` (local, gitignored) reflects `localhost:5433`.
 - [ ] `apps/api/prisma/schema.prisma` matches §21.2 verbatim (8 models, 2 enums, preview features, `@@map`/`@@index`/`@@unique` per §21.4).
 - [ ] `prisma/migrations/<ts>_init_schema/migration.sql` exists and is auto-generated DDL.
-- [ ] `prisma/migrations/<ts>_add_fts/migration.sql` exists and matches §21.3.
+- [ ] `prisma/migrations/<ts>_add_fts/migration.sql` exists and matches the corrected §21.3 SQL above (with `immutable_array_to_string` wrapper and quoted camelCase column refs).
 - [ ] `make services.up && make db.migrate` runs both migrations clean from a fresh volume.
 - [ ] `psql` shows 8 tables, 2 enums, `pg_trgm` extension, `search_vector` generated column, four GIN indexes on `algorithm_cases`.
 - [ ] `pnpm --filter @rubik/api typecheck` passes.
@@ -165,3 +173,4 @@ Three commits, each compiles + lints + typechecks on its own (per `080-process-r
 - **Schema drift detection on future migrations.** Prisma will see the `search_vector` column as "extra" if we ever run `prisma migrate diff` against an empty model. Mitigation: don't fight it; always use `prisma migrate dev --create-only` for any future raw-SQL change so the diff is hand-curated.
 - **`relationJoins` preview feature behavior.** Listed in §21.2; current Prisma 6 behavior may differ from when the design was written. Mitigation: enable as specified; if it surfaces issues we drop the flag in a follow-up — preview features are by definition movable.
 - **`fullTextSearchPostgres` preview vs. our raw-SQL FTS.** We're not using Prisma's `fullTextSearchPostgres` API — we're going straight to `$queryRaw` (sub-phase 5). Keeping the flag enabled is harmless and matches §21.2; revisit only if it costs us.
+- **`immutable_array_to_string` persists through `prisma migrate reset`.** Reset drops + recreates all tables but does not drop the function. Re-running the `add_fts` migration succeeds because `CREATE OR REPLACE FUNCTION` is idempotent. Not a bug — just expected behavior of raw-SQL migrations whose objects live outside the schema model.

@@ -1333,14 +1333,25 @@ Prisma doesn't model `tsvector` or `pg_trgm` natively. Add them in `prisma/migra
 ```sql
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Generated tsvector column on algorithm_cases (no triggers needed)
+-- Postgres requires every function inside a STORED generated column to be
+-- IMMUTABLE. array_to_string() is STABLE, so we wrap it.
+CREATE OR REPLACE FUNCTION immutable_array_to_string(arr text[], sep text)
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE PARALLEL SAFE
+  RETURN array_to_string(arr, sep);
+
+-- Generated tsvector column on algorithm_cases (no triggers needed).
+-- Column identifiers are camelCase + double-quoted because §21.2 schema
+-- fields use camelCase without @map, so Prisma creates "displayName" /
+-- "recognitionMd" rather than display_name / recognition_md.
 ALTER TABLE algorithm_cases
   ADD COLUMN search_vector tsvector
   GENERATED ALWAYS AS (
     setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
-    setweight(to_tsvector('english', coalesce(display_name, '')), 'A') ||
-    setweight(to_tsvector('english', array_to_string(tags, ' ')), 'B') ||
-    setweight(to_tsvector('english', coalesce(recognition_md, '')), 'C')
+    setweight(to_tsvector('english', coalesce("displayName", '')), 'A') ||
+    setweight(to_tsvector('english', immutable_array_to_string(coalesce(tags, '{}'), ' ')), 'B') ||
+    setweight(to_tsvector('english', coalesce("recognitionMd", '')), 'C')
   ) STORED;
 
 CREATE INDEX algorithm_cases_search_vector_idx
@@ -1350,7 +1361,7 @@ CREATE INDEX algorithm_cases_search_vector_idx
 CREATE INDEX algorithm_cases_name_trgm_idx
   ON algorithm_cases USING GIN (name gin_trgm_ops);
 CREATE INDEX algorithm_cases_display_name_trgm_idx
-  ON algorithm_cases USING GIN (display_name gin_trgm_ops);
+  ON algorithm_cases USING GIN ("displayName" gin_trgm_ops);
 ```
 
 `SearchService` queries via `$queryRaw` blending `ts_rank_cd(search_vector, ...) + similarity(name, q)` for relevance, with trigram indexes handling typo tolerance.
