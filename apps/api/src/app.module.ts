@@ -9,6 +9,7 @@ import { LoggerModule } from './infra/logger/logger.module'
 import { PrismaModule } from './infra/prisma/prisma.module'
 import { TelemetryModule } from './infra/telemetry/telemetry.module'
 import { ThrottlerModule } from './infra/throttler/throttler.module'
+import { CatalogModule } from './modules/catalog/catalog.module'
 import { HealthModule } from './modules/health/health.module'
 
 @Module({
@@ -20,6 +21,7 @@ import { HealthModule } from './modules/health/health.module'
     ThrottlerModule,
     TelemetryModule,
     HealthModule,
+    CatalogModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common'
 import { ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import type { AlgorithmSet } from '@rubik/shared'
 
-import { Public } from '../../../common/decorators/public.decorator'
+import { PublicCacheable } from '../../../common/decorators/public-cacheable.decorator'
 import { MethodsService } from './methods.service'
 
 @ApiTags('catalog')
@@ -10,7 +10,7 @@ import { MethodsService } from './methods.service'
 export class MethodsController {
   constructor(private readonly service: MethodsService) {}
 
-  @Public()
+  @PublicCacheable()
   @Get(':puzzleSlug/methods/:methodSlug/sets')
   @ApiOkResponse({ description: 'Algorithm sets for the given method' })
   @ApiNotFoundResponse({ description: 'puzzle_not_found or method_not_found' })

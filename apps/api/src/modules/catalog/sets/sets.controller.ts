@@ -2,7 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common'
 import { ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import type { AlgorithmSetWithCases } from '@rubik/shared'
 
-import { Public } from '../../../common/decorators/public.decorator'
+import { PublicCacheable } from '../../../common/decorators/public-cacheable.decorator'
 import { SetsService } from './sets.service'
 
 @ApiTags('catalog')
@@ -10,7 +10,7 @@ import { SetsService } from './sets.service'
 export class SetsController {
   constructor(private readonly service: SetsService) {}
 
-  @Public()
+  @PublicCacheable()
   @Get(':setSlug')
   @ApiOkResponse({ description: 'Set detail with cases + variants (denormalized)' })
   @ApiNotFoundResponse({ description: 'set_not_found' })
