@@ -853,3 +853,266 @@ apps/web/
 - `@sentry/nextjs` with source maps; client + server errors captured.
 - `instrumentation.ts` initializes pino server-side for request logs (matches api log shape).
 - Web Vitals reported to analytics provider.
+
+## 20. Packages deep structure
+
+Three workspace packages: `cube-core` (puzzle logic), `visualizer` (rendering), `shared` (DTO contracts). All pure TypeScript, no Node-specific or React-specific code unless explicitly stated.
+
+### 20.1 `packages/cube-core`
+
+Pure 3x3 puzzle model. **No React, no Node-specific APIs**, runs anywhere. Heart of correctness — the visualizer, scrambler, recognizer, and future solver all lean on it.
+
+#### Responsibilities
+- Cube state representation (two coexisting models, derivable from each other).
+- Move parsing from WCA notation.
+- Move application + algorithm operations (inverse, mirror, conjugate, commutator, cancel/normalize).
+- Algorithm metrics (HTM, STM, ETM).
+- Recognition: state → which case (PLL/OLL/F2L).
+- Scramble generation (WCA-style + "scramble into a specific case").
+- A `Puzzle<TState, TMove>` interface so 4x4 / Megaminx / Pyraminx can plug in later without consumer changes.
+
+#### State models
+
+| Model | Representation | Used for |
+|---|---|---|
+| **Piece model** (canonical) | 8 corners {pos 0–7, ori 0–2}, 12 edges {pos 0–11, ori 0–1}; backed by typed arrays for allocation-free hot paths | Move application, hashing, equality, recognition |
+| **Sticker model** (rendering) | 54-sticker `string[54]`, faces UFRDLB row-major | Visualizer, recognition fingerprints, on-the-wire format |
+
+Conversions both ways are pure functions.
+
+#### Move set (3x3 WCA)
+
+Face turns U/R/F/D/L/B with `'`, `2`; wide turns Uw/Rw/Fw/Dw/Lw/Bw; slices M/E/S; rotations x/y/z. All with prime + double variants.
+
+#### Folder structure
+
+```
+packages/cube-core/
+├── src/
+│   ├── index.ts                      barrel
+│   ├── types.ts                      Move, Face, Algorithm, State
+│   ├── puzzle/
+│   │   ├── puzzle.interface.ts       generic Puzzle<TState, TMove>
+│   │   └── puzzle-3x3.ts             concrete 3x3 implementation
+│   ├── moves/
+│   │   ├── tokenizer.ts              string → tokens
+│   │   ├── parser.ts                 tokens → Move[]
+│   │   ├── moves-3x3.ts              definitions per move (cubies, axis, angle)
+│   │   ├── apply.ts                  state + move → state
+│   │   ├── inverse.ts
+│   │   ├── mirror.ts                 M / S / E axis
+│   │   └── cancel.ts                 R R' → ε,  R R → R2
+│   ├── algorithm/
+│   │   ├── operations.ts             concat, inverse, mirror, conjugate, commutator
+│   │   ├── metrics.ts                HTM, STM, ETM
+│   │   └── normalize.ts              cancel + reduce
+│   ├── state/
+│   │   ├── piece-model.ts
+│   │   ├── sticker-model.ts
+│   │   ├── conversion.ts             piece ↔ sticker
+│   │   ├── solved.ts                 canonical solved state
+│   │   ├── equality.ts
+│   │   └── hash.ts                   stable string/numeric hash
+│   ├── recognition/
+│   │   ├── pll.ts                    21 cases, AUF/rotation normalization
+│   │   ├── oll.ts                    57 cases
+│   │   ├── f2l.ts                    41 cases (per slot)
+│   │   └── normalize.ts              shared rotation/AUF helpers
+│   └── scramble/
+│       ├── wca-3x3.ts                WCA-style random move sequence
+│       ├── case-scramble.ts          random pre-state + inverse-of-solution
+│       └── rng.ts                    seeded RNG (deterministic for tests)
+├── __tests__/
+│   ├── apply.spec.ts
+│   ├── inverse.spec.ts
+│   ├── mirror.spec.ts
+│   ├── recognition.spec.ts
+│   ├── scramble.spec.ts
+│   └── property/                     fast-check
+│       ├── inverse.property.ts       any seq + inverse(seq) = solved
+│       ├── mirror.property.ts        mirror(mirror(seq)) = seq
+│       └── canonicalization.property.ts
+├── fixtures/
+│   ├── known-scrambles.json          ~20 famous scrambles + states + solutions
+│   ├── pll-cases.json                21 case-state fingerprints
+│   └── oll-cases.json                57 case-state fingerprints
+├── package.json
+└── tsconfig.json
+```
+
+#### Public API
+
+```ts
+import {
+  Puzzle3x3,
+  parseAlgorithm, applyAlgorithm,
+  invertAlgorithm, mirrorAlgorithm, normalizeAlgorithm,
+  scrambleWCA, scrambleIntoCase,
+  recognizePLL, recognizeOLL, recognizeF2L,
+  solvedState, fromStickerString, toStickerString, hashState,
+  htm, stm, etm,
+} from '@rubik/cube-core'
+```
+
+#### Performance + correctness contract
+
+- All hot-path move application allocates zero heap objects. Use typed arrays.
+- Coverage floor **≥95%** (locked in §11).
+- Property-based tests via fast-check for algebraic identities.
+- Known-scrambles corpus (~20) regression-checked on every CI run.
+
+### 20.2 `packages/visualizer`
+
+3D + 2D cube rendering. **Two entry points** so consumers can pull only what they need.
+
+| Entry | Contains | Purpose | RSC-safe? |
+|---|---|---|---|
+| `@rubik/visualizer/ssr` | SVG sticker diagrams (TopView, F2LView, OLLView, PLLView) | Set grids, search results, OG fallbacks — zero hydration cost | **Yes** |
+| `@rubik/visualizer/client` | three.js + R3F `<Visualizer/>`, controls, hooks | Case detail page, embed iframe — interactive 3D | No (`ssr: false` in web) |
+
+#### Tech
+- `three`, `@react-three/fiber` v9 (React 19), `@react-three/drei` for OrbitControls/Effects.
+- `leva` dev-only for debug GUI.
+
+#### Renderer architecture (the standard, glitch-free approach)
+
+- Scene root contains 27 cubie groups.
+- Each cubie = BoxGeometry + sticker meshes per face, materials from a shared color token map.
+- Move animation: pluck the 9 cubies on the rotating face into a **transient AnimationGroup**, tween its rotation 90°/180°, then snap rotation onto local cubie positions and re-parent. Avoids floating-point drift over long sequences.
+- Tween via a small RAF-driven helper (no GSAP — overkill).
+
+#### Folder structure
+
+```
+packages/visualizer/
+├── src/
+│   ├── index.ts
+│   ├── ssr.ts                          re-exports SVG only (RSC-safe surface)
+│   ├── client.ts                       re-exports React + three.js (lazy on web)
+│   ├── react/
+│   │   ├── Visualizer.tsx              top-level <Visualizer/>
+│   │   ├── Cube.tsx                    renders 27 cubies into the scene
+│   │   ├── Cubie.tsx
+│   │   ├── camera/CameraRig.tsx        orbit / perspective presets
+│   │   └── hooks/
+│   │       ├── usePlayback.ts          state machine (zustand) driving animation
+│   │       └── useMoveAnimation.ts     animation lifecycle: pluck → tween → snap
+│   ├── three/                          framework-agnostic three.js
+│   │   ├── createCubeScene.ts
+│   │   ├── animation.ts                move animation primitives
+│   │   ├── materials.ts                sticker materials, color tokens
+│   │   └── tween.ts                    RAF-driven tween helper
+│   ├── svg/
+│   │   ├── TopView.tsx                 U-face grid
+│   │   ├── F2LView.tsx
+│   │   ├── OLLView.tsx                 U-face + top edges of sides
+│   │   ├── PLLView.tsx                 with arrows
+│   │   └── stickerLayout.ts            cube-core sticker index → SVG coords
+│   └── tokens/colors.ts
+├── __tests__/
+│   ├── animation.spec.ts               pure logic, no DOM
+│   └── stickerLayout.spec.ts
+├── stories/Visualizer.stories.tsx
+├── package.json
+└── tsconfig.json
+```
+
+#### Public API
+
+```ts
+import { Visualizer } from '@rubik/visualizer/client'
+
+<Visualizer
+  initialState={stickerString}
+  algorithm="R U R' U'"
+  speed={1}
+  loop={false}
+  controls={{ playPause: true, scrub: true, speed: true, camera: 'orbit' }}
+  reducedMotion={prefersReduced}
+  onMoveChange={(idx) => ...}
+/>
+
+import { TopView, PLLView } from '@rubik/visualizer/ssr'
+
+<PLLView state={stickerString} arrows />
+```
+
+#### Budgets and a11y
+
+- 60fps on a 2020 mid-tier laptop; cold chunk ~200kb gzipped (three.js dominates).
+- One scene per page; full dispose on unmount.
+- ARIA live region announces "Move 3 of 14: R'".
+- Keyboard: Space play/pause, ← → step, +/- speed.
+- `prefers-reduced-motion` → static end-state, no animation.
+
+### 20.3 `packages/shared`
+
+Domain contracts. **The truth boundary between web and api.** No React, no Node-specific code.
+
+#### Responsibilities
+- All zod schemas for API DTOs.
+- Inferred TS types (auto-derived).
+- Constants (slugs, learning-status enum).
+- Notation formatting helpers (display-side; cube-core handles parsing).
+- Generic utilities (slug helpers, Result type).
+
+#### Folder structure
+
+```
+packages/shared/
+├── src/
+│   ├── index.ts                      barrel
+│   ├── schemas/
+│   │   ├── puzzle.ts                 PuzzleSchema, MethodSchema, SetSchema, CaseSchema, VariantSchema
+│   │   ├── user.ts                   UserSchema, UserAlgorithmSchema
+│   │   ├── auth.ts                   GoogleLoginSchema, TokenPairSchema
+│   │   ├── scramble.ts
+│   │   ├── search.ts
+│   │   ├── pagination.ts
+│   │   ├── error.ts
+│   │   └── index.ts
+│   ├── types/index.ts                inferred TS types from schemas
+│   ├── constants/
+│   │   ├── puzzles.ts                PUZZLE_SLUGS as const
+│   │   ├── methods.ts
+│   │   ├── sets.ts
+│   │   └── learning-status.ts
+│   ├── notation/
+│   │   ├── format.ts                 display formatting (superscripts, spacing)
+│   │   ├── normalize.ts              canonicalize whitespace/case for storage
+│   │   └── tokens.ts                 regex for syntax highlighting
+│   └── utils/
+│       ├── slug.ts
+│       ├── result.ts                 Result<T, E>
+│       └── id.ts
+├── __tests__/
+├── package.json
+└── tsconfig.json
+```
+
+#### Schemas as the single source of truth
+
+`CaseSchema` is defined once in `packages/shared/schemas/puzzle.ts`. Web imports it for forms + response parsing. Api imports it for `nestjs-zod` controller validation + Swagger generation. Drift becomes a build error, not a runtime mystery.
+
+### 20.4 Inter-package dependency graph
+
+```
+       packages/shared              packages/cube-core
+          (no workspace deps)         (no workspace deps)
+                  │                          │
+                  │                          ▼
+                  │                packages/visualizer
+                  │                  (deps: cube-core)
+                  │                          │
+                  ▼                          ▼
+            ┌──────────────────────────────────┐
+            │ apps/web   (deps: shared, cube-core, visualizer) │
+            │ apps/api   (deps: shared, cube-core)             │
+            └──────────────────────────────────┘
+```
+
+- **shared** and **cube-core** are leaves — independently buildable and testable, no circular-dep risk.
+- **visualizer** depends on **cube-core** for the state model + move algebra it animates.
+- **web** + **api** consume the leaves they need.
+- Turborepo task graph respects this; `turbo run build` builds leaves first.
+- **Api never imports visualizer** — server has no need to render. Keeps the api Docker image lean.
