@@ -1613,3 +1613,293 @@ PR-based, leaning on the same review tools as code:
 | Versioning of historical alg variants | Git history is sufficient; v2 if we want a UI for "see prior version". |
 | In-app editing | PRs are the editing UI for v1. v2: admin UI writing to DB with sync-to-YAML, or drop YAML entirely. |
 | Multi-puzzle content (Megaminx etc.) | Directory structure already supports it; just author files. |
+
+## 23. Concrete dev-tooling files
+
+The actual `Makefile`, `docker-compose.yaml`, `.dockerignore`, and `apps/api/Dockerfile`. Drop-in once the monorepo is bootstrapped.
+
+### 23.1 `Makefile` (repo root)
+
+```makefile
+# rubik-algorithm — top-level Makefile
+# Convention: each target ends with `## description`; `help` extracts those.
+
+SHELL       := /usr/bin/env bash
+.SHELLFLAGS := -eu -o pipefail -c
+.DEFAULT_GOAL := help
+
+PNPM    ?= pnpm
+COMPOSE ?= docker compose
+
+# -- Help -------------------------------------------------------------------
+.PHONY: help
+help: ## Show available targets
+	@awk 'BEGIN { FS = ":.*?## " } /^[a-zA-Z0-9_.\-]+:.*?## / \
+	      { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+# -- Workspace --------------------------------------------------------------
+.PHONY: install
+install: ## Install all workspace dependencies
+	$(PNPM) install
+
+.PHONY: clean
+clean: ## Remove build artifacts and node_modules
+	$(PNPM) -r exec rm -rf dist .next .turbo .vitepress/dist
+	rm -rf node_modules
+
+# -- Local services ---------------------------------------------------------
+.PHONY: services.up
+services.up: ## Start Postgres + Redis (Docker Compose)
+	$(COMPOSE) up -d postgres redis
+
+.PHONY: services.down
+services.down: ## Stop and remove all Compose services
+	$(COMPOSE) down
+
+.PHONY: services.logs
+services.logs: ## Tail Compose service logs
+	$(COMPOSE) logs -f postgres redis
+
+# -- Dev --------------------------------------------------------------------
+.PHONY: dev
+dev: services.up ## Bring up services and run all apps in dev (web + api + docs)
+	$(PNPM) -w turbo run dev
+
+.PHONY: stop
+stop: services.down ## Alias for services.down
+
+.PHONY: dev.web
+dev.web: services.up ## Run only the web app in dev
+	$(PNPM) --filter @rubik/web dev
+
+.PHONY: dev.api
+dev.api: services.up ## Run only the api in dev
+	$(PNPM) --filter @rubik/api start:dev
+
+.PHONY: dev.docs
+dev.docs: ## Run only the docs site in dev (no backing services needed)
+	$(PNPM) --filter @rubik/docs dev
+
+# -- Database ---------------------------------------------------------------
+.PHONY: db.migrate
+db.migrate: ## Create + apply a new migration locally (prisma migrate dev)
+	$(PNPM) --filter @rubik/api prisma migrate dev
+
+.PHONY: db.deploy
+db.deploy: ## Apply pending migrations (CI/prod)
+	$(PNPM) --filter @rubik/api prisma migrate deploy
+
+.PHONY: db.reset
+db.reset: ## Drop, recreate, and reseed the local DB (destructive)
+	$(PNPM) --filter @rubik/api prisma migrate reset --force
+
+.PHONY: db.seed
+db.seed: ## Run the YAML → DB seed pipeline
+	$(PNPM) --filter @rubik/api prisma db seed
+
+.PHONY: db.studio
+db.studio: ## Open Prisma Studio
+	$(PNPM) --filter @rubik/api prisma studio
+
+.PHONY: db.format
+db.format: ## Canonicalize prisma/schema.prisma
+	$(PNPM) --filter @rubik/api prisma format
+
+# -- Content ----------------------------------------------------------------
+.PHONY: content.validate
+content.validate: ## Validate content/ YAML (no DB writes)
+	$(PNPM) --filter @rubik/api tsx prisma/seed.ts --validate-only
+
+.PHONY: content.diff
+content.diff: ## Show DB ⇄ YAML drift
+	$(PNPM) --filter @rubik/api tsx prisma/seed.ts --dry-run
+
+.PHONY: content.seed
+content.seed: db.seed ## Alias for db.seed
+
+.PHONY: content.lint
+content.lint: ## Lint content YAML (whitespace, ordering, slug-name parity)
+	$(PNPM) --filter @rubik/api tsx scripts/content-lint.ts
+
+# -- Quality ----------------------------------------------------------------
+.PHONY: lint
+lint: ## Lint all packages
+	$(PNPM) -w turbo run lint
+
+.PHONY: typecheck
+typecheck: ## TypeScript typecheck across the monorepo
+	$(PNPM) -w turbo run typecheck
+
+.PHONY: test
+test: ## Run unit + integration tests
+	$(PNPM) -w turbo run test
+
+.PHONY: e2e
+e2e: ## Run Playwright e2e tests against the running stack
+	$(PNPM) --filter @rubik/web exec playwright test
+
+.PHONY: format
+format: ## Run prettier across the monorepo
+	$(PNPM) -w prettier --write .
+
+# -- Build ------------------------------------------------------------------
+.PHONY: build
+build: ## Build all apps and packages
+	$(PNPM) -w turbo run build
+
+.PHONY: docs.build
+docs.build: ## Build the VitePress docs site
+	$(PNPM) --filter @rubik/docs build
+
+# -- Docker -----------------------------------------------------------------
+.PHONY: docker.api
+docker.api: ## Build the production api Docker image locally
+	docker build -f apps/api/Dockerfile -t rubik-api:local .
+
+# -- OpenAPI ----------------------------------------------------------------
+.PHONY: openapi.emit
+openapi.emit: ## Emit apps/api/openapi.json from current controllers
+	$(PNPM) --filter @rubik/api openapi:emit
+```
+
+### 23.2 `docker-compose.yaml` (repo root)
+
+Local-dev backing services only. Apps run on the host via `pnpm dev` for instant HMR.
+
+```yaml
+name: rubik-algorithm
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: rubik-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rubik
+      POSTGRES_PASSWORD: rubik
+      POSTGRES_DB: rubik
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rubik -d rubik"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: rubik-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:
+```
+
+Local connection strings (for `.env`):
+
+```
+DATABASE_URL=postgresql://rubik:rubik@localhost:5432/rubik
+DIRECT_URL=postgresql://rubik:rubik@localhost:5432/rubik
+REDIS_URL=redis://localhost:6379
+```
+
+### 23.3 `.dockerignore` (repo root)
+
+```
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/.vitepress/dist
+
+.git
+.github
+docs/
+content/
+
+*.log
+.env
+.env.*
+!.env.example
+
+apps/web
+apps/docs
+```
+
+`apps/web` and `apps/docs` are excluded because they're not needed in the api image. `content/` is excluded because seeding runs as a separate CI job, not from the runtime container.
+
+### 23.4 `apps/api/Dockerfile`
+
+Multi-stage. pnpm-aware. Prisma generate happens during build, not at runtime.
+
+```dockerfile
+# syntax=docker/dockerfile:1.7
+
+# ---- Stage 1: deps (cache-friendly) ----
+FROM node:22-alpine AS deps
+RUN corepack enable
+WORKDIR /repo
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
+COPY packages/cube-core/package.json packages/cube-core/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ---- Stage 2: build ----
+FROM node:22-alpine AS build
+RUN corepack enable
+WORKDIR /repo
+
+COPY --from=deps /repo/node_modules ./node_modules
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
+COPY apps/api ./apps/api
+COPY packages ./packages
+
+RUN pnpm --filter @rubik/api exec prisma generate
+RUN pnpm -w turbo run build --filter=@rubik/api...
+
+# Extract a production-only subtree.
+RUN pnpm --filter @rubik/api deploy --prod --legacy /out
+
+# ---- Stage 3: runtime (slim) ----
+FROM node:22-alpine AS runtime
+RUN apk add --no-cache tini
+ENV NODE_ENV=production
+WORKDIR /app
+
+RUN addgroup -S app && adduser -S app -G app
+
+COPY --from=build --chown=app:app /out/dist ./dist
+COPY --from=build --chown=app:app /out/node_modules ./node_modules
+COPY --from=build --chown=app:app /out/package.json ./package.json
+COPY --from=build --chown=app:app /repo/apps/api/prisma ./prisma
+
+USER app
+EXPOSE 3001
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/main.js"]
+```
+
+Target image size: <200 MB (Alpine + node_modules + dist).
+
+### 23.5 Notes
+
+- The Makefile's pnpm filters use `@rubik/*` package names — those names are fixed in §20.3 / §18.2 / §19.2. If you rename a package, update its filter here.
+- `db.reset` is destructive (drops local DB) and is the only Make target that warrants the warning. CI never calls it.
+- The api Dockerfile is consumed by Fly.io for prod, GitHub Actions for image build, and `make docker.api` for local debugging — same image artifact in all three.
