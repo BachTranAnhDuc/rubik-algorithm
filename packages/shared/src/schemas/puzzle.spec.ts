@@ -105,7 +105,7 @@ describe('AlgorithmCaseSchema', () => {
 })
 
 describe('AlgorithmVariantSchema', () => {
-  it('accepts a variant row', () => {
+  it('accepts a variant row with all optional metadata', () => {
     const result = AlgorithmVariantSchema.safeParse({
       id: 'v_t_perm_primary',
       caseId: 'c_t_perm',
@@ -115,8 +115,41 @@ describe('AlgorithmVariantSchema', () => {
       isPrimary: true,
       attribution: 'Standard',
       fingertrickMd: null,
+      videoUrl: 'https://www.youtube.com/watch?v=abc123',
       displayOrder: 0,
     })
     expect(result.success).toBe(true)
+  })
+
+  it('accepts a variant with no video', () => {
+    const result = AlgorithmVariantSchema.safeParse({
+      id: 'v_x',
+      caseId: 'c_x',
+      notation: 'R',
+      moveCountHtm: 1,
+      moveCountStm: 1,
+      isPrimary: false,
+      attribution: null,
+      fingertrickMd: null,
+      videoUrl: null,
+      displayOrder: 1,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects a non-URL videoUrl', () => {
+    const result = AlgorithmVariantSchema.safeParse({
+      id: 'v_x',
+      caseId: 'c_x',
+      notation: 'R',
+      moveCountHtm: 1,
+      moveCountStm: 1,
+      isPrimary: false,
+      attribution: null,
+      fingertrickMd: null,
+      videoUrl: 'not a url',
+      displayOrder: 0,
+    })
+    expect(result.success).toBe(false)
   })
 })

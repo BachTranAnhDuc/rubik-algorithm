@@ -31,6 +31,7 @@ export const AlgorithmVariantSchema = z.object({
   isPrimary: z.boolean(),
   attribution: z.string().nullable(),
   fingertrickMd: z.string().nullable(),
+  videoUrl: z.string().url().nullable(),
   displayOrder: z.number().int().nonnegative(),
 })
 

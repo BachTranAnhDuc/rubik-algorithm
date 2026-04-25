@@ -21,6 +21,19 @@ describe('parseAlgorithm', () => {
     ])
   })
 
+  it('parses lowercase wide shorthand identically to Xw', () => {
+    expect(parseAlgorithm("r u' f2 b' l d")).toEqual([
+      { axis: 'R', wide: true, amount: 1 },
+      { axis: 'U', wide: true, amount: 3 },
+      { axis: 'F', wide: true, amount: 2 },
+      { axis: 'B', wide: true, amount: 3 },
+      { axis: 'L', wide: true, amount: 1 },
+      { axis: 'D', wide: true, amount: 1 },
+    ])
+    expect(parseAlgorithm('r')).toEqual(parseAlgorithm('Rw'))
+    expect(parseAlgorithm("u'")).toEqual(parseAlgorithm("Uw'"))
+  })
+
   it('parses slices and rotations', () => {
     const alg = parseAlgorithm("M' E S2 x y' z2")
     expect(alg).toEqual([
@@ -41,7 +54,9 @@ describe('parseAlgorithm', () => {
   it('rejects garbage tokens', () => {
     expect(() => parseAlgorithm('R Q')).toThrow(/invalid move token/)
     expect(() => parseAlgorithm('R3')).toThrow(/invalid move token/)
-    expect(() => parseAlgorithm("M w")).toThrow(/invalid move token/)
+    expect(() => parseAlgorithm('M w')).toThrow(/invalid move token/)
+    expect(() => parseAlgorithm('m')).toThrow(/invalid move token/) // lowercase slice not allowed
+    expect(() => parseAlgorithm('X')).toThrow(/invalid move token/) // uppercase rotation not allowed
   })
 })
 

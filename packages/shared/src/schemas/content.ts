@@ -36,6 +36,7 @@ export const VariantContentSchema = z.object({
   is_primary: z.boolean().default(false),
   attribution: z.string().nullable().optional(),
   fingertrick_md: z.string().nullable().optional(),
+  video_url: z.string().url().nullable().optional(),
 })
 
 export const CaseContentSchema = z

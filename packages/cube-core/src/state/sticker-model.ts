@@ -23,6 +23,13 @@ export const SOLVED_STATE: State = buildSolved()
 
 export const isSolved = (state: State): boolean => state === SOLVED_STATE
 
+// Sticker alphabet: U F R D L B for solved colors, plus `n` (blank, "this
+// sticker is masked") and `t` (transparent, "don't render this sticker") for
+// partial-state cases like F2L.  Matches VisualCube's `fd` convention; see
+// docs/plans/2026-04-25-cubing-domain-research-design.md §3.6.
+//
+// The sticker model itself is character-agnostic — apply* and recognition
+// helpers preserve `n`/`t` through any move sequence.
 export const fromStickerString = (input: string): State => {
   const cleaned = input.replace(/\s+/g, '')
   if (cleaned.length !== STICKER_COUNT) {

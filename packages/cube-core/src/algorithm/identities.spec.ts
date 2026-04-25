@@ -76,6 +76,23 @@ describe('cube identities', () => {
   })
 })
 
+describe('lowercase wide shorthand applied to solved equals Xw', () => {
+  for (const [lc, uc] of [
+    ['r', 'Rw'],
+    ['l', 'Lw'],
+    ['u', 'Uw'],
+    ['d', 'Dw'],
+    ['f', 'Fw'],
+    ['b', 'Bw'],
+  ]) {
+    it(`${lc} ≡ ${uc}`, () => {
+      const left = applyAlgorithm(SOLVED_STATE, lc!)
+      const right = applyAlgorithm(SOLVED_STATE, uc!)
+      expect(left).toBe(right)
+    })
+  }
+})
+
 describe('algorithm + inverse = identity (random sequences)', () => {
   // Deterministic spot-check across a broad set of moves.
   const samples = [

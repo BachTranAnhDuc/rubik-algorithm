@@ -19,6 +19,14 @@ describe('MOVE_TOKEN_REGEX', () => {
     }
   })
 
+  it('accepts lowercase wide shorthand (u/d/f/b/r/l)', () => {
+    for (const face of ['u', 'd', 'f', 'b', 'r', 'l']) {
+      expect(MOVE_TOKEN_REGEX.test(face)).toBe(true)
+      expect(MOVE_TOKEN_REGEX.test(`${face}'`)).toBe(true)
+      expect(MOVE_TOKEN_REGEX.test(`${face}2`)).toBe(true)
+    }
+  })
+
   it('accepts slices and rotations', () => {
     for (const t of ['M', 'E', 'S', 'x', 'y', 'z']) {
       expect(MOVE_TOKEN_REGEX.test(t)).toBe(true)
@@ -27,12 +35,13 @@ describe('MOVE_TOKEN_REGEX', () => {
     }
   })
 
-  it('rejects garbage and lowercase faces', () => {
-    expect(MOVE_TOKEN_REGEX.test('u')).toBe(false)
+  it('rejects garbage tokens', () => {
     expect(MOVE_TOKEN_REGEX.test('R3')).toBe(false)
     expect(MOVE_TOKEN_REGEX.test("R''")).toBe(false)
     expect(MOVE_TOKEN_REGEX.test('')).toBe(false)
     expect(MOVE_TOKEN_REGEX.test('Q')).toBe(false)
+    expect(MOVE_TOKEN_REGEX.test('m')).toBe(false) // lowercase slices not allowed
+    expect(MOVE_TOKEN_REGEX.test('X')).toBe(false) // uppercase rotations not allowed
   })
 })
 
