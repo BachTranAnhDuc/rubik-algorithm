@@ -1423,3 +1423,193 @@ CI runs `prisma migrate deploy` in a one-shot Fly machine before traffic flips; 
 | Audit log | v1 doesn't need it. App-level structured logs cover the audit trail. |
 | Multiple OAuth providers per user | v1 is Google-only; `User.googleSub` is sufficient. v2: extract to a `UserIdentity` table. |
 | Localization | v1 is English. v2: add `*_translations` tables or a JSONB locale column. |
+
+## 22. Content directory (`content/`)
+
+Git-versioned YAML is the editorial source of truth. The DB is rebuilt from `content/` via the seed pipeline; YAML wins on conflict.
+
+### 22.1 Directory layout
+
+```
+content/
+├── puzzles/
+│   └── 3x3/
+│       ├── puzzle.yaml                            puzzle metadata
+│       └── methods/
+│           └── cfop/
+│               ├── method.yaml                    method metadata + description
+│               └── sets/
+│                   ├── f2l/
+│                   │   ├── set.yaml               set metadata
+│                   │   └── cases/                 41 files
+│                   │       ├── 01-corner-edge-front.yaml
+│                   │       └── …
+│                   ├── oll/
+│                   │   ├── set.yaml
+│                   │   └── cases/                 57 files
+│                   └── pll/
+│                       ├── set.yaml
+│                       └── cases/                 21 files
+│                           ├── aa-perm.yaml
+│                           ├── t-perm.yaml
+│                           └── …
+│
+└── fixtures/                                      minimal subset for tests
+    └── puzzles/3x3/methods/cfop/sets/{pll,oll,f2l}/cases/<2 each>.yaml
+```
+
+One file per case, one file per set/method/puzzle. Diff-friendly, review-friendly.
+
+### 22.2 YAML schemas
+
+**`puzzle.yaml`**
+```yaml
+slug: 3x3
+name: 3x3 Cube
+display_name: 3×3
+wca_event_code: "333"
+display_order: 0
+state_schema_version: v1
+```
+
+**`method.yaml`**
+```yaml
+slug: cfop
+name: CFOP
+display_order: 0
+description_md: |
+  CFOP (Cross, F2L, OLL, PLL) is the most popular speedsolving method.
+  It builds the cube layer by layer with the last two layers solved
+  in two algorithmic stages.
+```
+
+**`set.yaml`**
+```yaml
+slug: pll
+name: PLL
+display_name: Permutation of Last Layer
+case_count_expected: 21
+recognition_basis: PLL_PERMUTATION   # enum from §21
+display_order: 3
+description_md: |
+  PLL permutes the pieces of the last layer once they are oriented.
+  21 distinct cases.
+```
+
+**Case file** (example: `pll/cases/t-perm.yaml`)
+```yaml
+slug: t-perm
+name: T Perm
+display_name: T-Perm
+display_order: 14
+# 54-char sticker string, faces UFRDLB row-major
+case_state: "UUUUUUUUU R B R F R F R F R B B B L L L L L L D D D D D D D D D F F F F F F F F F"
+recognition_md: |
+  Two adjacent headlights on one side; non-matching corners on the right.
+  Bar on the left side.
+tags:
+  - adjacent-corner-swap
+  - edge-2-cycle
+
+variants:
+  - notation: R U R' U' R' F R2 U' R' U' R U R' F'
+    is_primary: true
+    attribution: Standard
+    fingertrick_md: |
+      Start with right hand resting on top. Push R with index, then…
+  - notation: x R2 D2 R' U' R D2 R' U R'
+    is_primary: false
+    attribution: Alternative (regrip-free)
+```
+
+### 22.3 Validation (zod, in `packages/shared`)
+
+Content-shape schemas live in `packages/shared/schemas/content.ts`, separate from but parallel to the API DTO schemas in §20.3:
+
+- `PuzzleContentSchema`, `MethodContentSchema`, `SetContentSchema`, `CaseContentSchema`, `VariantContentSchema`.
+
+**File-level rules:**
+- `slug` matches `/^[a-z0-9]+(-[a-z0-9]+)*$/` (kebab-case).
+- `case_state` is exactly 54 characters in the valid sticker alphabet (whitespace permitted, normalized at parse).
+- `tags` are kebab-case.
+- `recognition_basis` matches the enum in `prisma/schema.prisma`.
+
+**Cross-file rules** (run after loading all files):
+- File path must match `slug` (file `t-perm.yaml` must contain `slug: t-perm`).
+- `set.case_count_expected` matches the actual case file count.
+- Exactly one variant per case has `is_primary: true`.
+- `display_order` is unique within its parent.
+
+**Notation correctness** (uses `packages/cube-core`):
+- Each `variant.notation` parses via `parseAlgorithm()` without errors.
+- `applyAlgorithm(solvedState, inverse(notation))` produces a state whose visual matches `case_state` — sanity check that the published alg actually solves the case.
+
+Any failure is a hard error in seed AND in a CI job — bad content never lands.
+
+### 22.4 Ingest pipeline (`prisma/seed.ts`)
+
+```ts
+// outline
+import { glob } from 'glob'
+import yaml from 'js-yaml'
+import { PrismaClient } from '@prisma/client'
+import { PuzzleContentSchema, /* … */ } from '@rubik/shared/content'
+import { parseAlgorithm, applyAlgorithm, inverseAlgorithm,
+         solvedState, fromStickerString, hashState } from '@rubik/cube-core'
+
+// 1. Discover files via glob.
+// 2. Parse each file (js-yaml).
+// 3. Validate each with the zod schema.
+// 4. Cross-validate (paths, counts, primaries, notation correctness).
+// 5. Upsert in dependency order: Puzzle → Method → Set → Case → Variant.
+// 6. If --prune, delete DB rows whose slug is no longer in YAML.
+```
+
+**CLI flags:**
+
+| Flag | Effect |
+|---|---|
+| `--validate-only` | Run all validation, skip DB writes. Used in CI. |
+| `--puzzle <slug>` | Limit ingest to one puzzle. |
+| `--method <slug>` | Limit to one method within a puzzle. |
+| `--prune` | Delete DB rows whose slug is no longer in YAML. Without this flag, missing entries are reported as warnings but kept. |
+| `--dry-run` | Print the upserts that would happen; do nothing. |
+
+Wired via `package.json`:
+
+```json
+{ "prisma": { "seed": "tsx prisma/seed.ts" } }
+```
+
+So `prisma db seed` (and `make db.seed`) just works.
+
+### 22.5 Authoring workflow
+
+PR-based, leaning on the same review tools as code:
+
+1. Add or edit a YAML file under `content/`.
+2. `make content.validate` (calls `prisma/seed.ts --validate-only`) locally — fast, no DB needed if `--no-db` mode skips upserts entirely.
+3. Optional: `make db.seed` to apply locally and click around.
+4. Commit + PR.
+5. CI runs the same validation. If notation references a case state that doesn't match, the PR fails with a precise error pointing at the file and line.
+6. On merge to `main`, the deploy pipeline runs `prisma migrate deploy && prisma db seed` against prod (gated by approval). The web app's on-demand revalidation hook fires for every changed slug.
+
+### 22.6 Make targets
+
+| Command | What it does |
+|---|---|
+| `make content.validate` | All zod + cross-file checks; no DB writes |
+| `make content.diff` | Show DB ⇄ YAML drift (rows in DB but not YAML, and vice versa) |
+| `make content.seed` | Alias for `make db.seed` (muscle memory either way) |
+| `make content.lint` | Whitespace, ordering, slug-name parity — lint only, no semantic checks |
+
+### 22.7 Deferred
+
+| Deferred | Why |
+|---|---|
+| Localization (`*_translations`) | v1 English-only. v2: per-locale YAML files or a language column. |
+| Media assets (recognition photos, video) | v1: cube state diagram is generated from `case_state` — no extra assets. v2: `content/media/` directory + path references. |
+| Per-case OG-image overrides | Auto-generated from state (§19.8). |
+| Versioning of historical alg variants | Git history is sufficient; v2 if we want a UI for "see prior version". |
+| In-app editing | PRs are the editing UI for v1. v2: admin UI writing to DB with sync-to-YAML, or drop YAML entirely. |
+| Multi-puzzle content (Megaminx etc.) | Directory structure already supports it; just author files. |
