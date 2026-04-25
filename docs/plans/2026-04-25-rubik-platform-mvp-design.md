@@ -45,14 +45,17 @@ Monorepo (pnpm workspaces):
 rubik-algorithm/
 ├── apps/
 │   ├── web/          Next.js 15 (App Router) — frontend + SSR
-│   └── api/          Fastify + TypeScript — REST API
+│   ├── api/          NestJS 11 + Prisma — REST API
+│   └── docs/         VitePress — project documentation site (§17)
 ├── packages/
 │   ├── shared/       Domain types, notation parser, scrambler, validation schemas (zod)
 │   ├── cube-core/    Pure 3x3 cube model: state, move application, sticker layout
 │   └── visualizer/   React + three.js cube renderer (consumed by web)
 ├── content/          Authored algorithm data as YAML/JSON (versioned in git)
-└── docs/
+└── docs/             Internal planning artifacts (this design doc, future plans)
 ```
+
+The repo houses **three deployable apps** and three shared packages. Web and api run as long-lived services; docs is built to static HTML and served from a CDN. Web is React/Next.js, docs is Vue/VitePress — they share nothing at runtime; pnpm workspaces keep their dep trees independent so neither bloats the other.
 
 ### Tech stack
 - **Language:** TypeScript end-to-end.
@@ -255,22 +258,50 @@ This is a content-heavy product; SEO is the growth engine.
 - OG images: server-rendered cube state thumbnails per case.
 - Page targets: `<60kb HTML`, `<200kb JS for non-visualizer pages`, LCP <2.5s on 4G.
 
-## 11. Testing strategy
+## 11. Testing as architecture
 
-- `cube-core` is the heart and gets exhaustive unit tests: known scrambles, alg inverses, identity sequences, OLL/PLL case detection round-trips. Property-based tests via fast-check (any sequence + its inverse = identity).
-- API: Fastify + Vitest integration tests against a Postgres test container.
-- Web: component tests (Vitest + Testing Library), Playwright e2e for the critical flows (browse → case page → mark learned → see in /me).
-- Visualizer: Storybook with visual regression snapshots (Chromatic or local Playwright).
-- CI: lint, typecheck, unit, integration, e2e on every PR; preview deploy per PR.
+Testing is treated as a first-class architectural layer with explicit boundaries, ownership, fixtures, and merge gates — not just a strategy footnote.
+
+### Test pyramid by package/app
+
+| Layer | Where it lives | What it tests | Tooling |
+|---|---|---|---|
+| Unit | `packages/cube-core/__tests__/` | State, move application, alg parsing, recognition. Property-based: any sequence + its inverse = identity; mirror+mirror = identity; conjugate algebra. | Vitest + fast-check |
+| Unit | `packages/shared/__tests__/` | DTO/zod schemas, notation tokenizer, scrambler determinism (seeded). | Vitest |
+| Component | `packages/visualizer/` (Storybook) | Visualizer renders correctly for canonical states; key algs animate without flicker; reduced-motion fallback. | Storybook + Playwright visual snapshots |
+| Integration | `apps/api/test/` | Each Nest module against a real Postgres test container. Auth flow, RBAC, cache invalidation, Prisma queries. | Vitest + Testcontainers |
+| Contract | `apps/api/test/contract/` | OpenAPI spec stays in sync with controllers; published schemas don't break clients. | `@nestjs/swagger` snapshot diff |
+| Component | `apps/web/__tests__/` | Server components, page renders, alg-page generation from fixture content. | Vitest + Testing Library |
+| E2E | `apps/web/e2e/` | Critical flows: browse → case → sign in → mark learned → see in `/me`; visualizer playback; search; embed iframe. | Playwright |
+
+### Test data strategy
+
+- A canonical fixture set lives at `packages/cube-core/fixtures/` and `content/fixtures/`: minimal but realistic (1 puzzle, 1 method, 2 sets, 4 cases, primary variants only). All API integration and web component tests read from this fixture set, not real content. Tests stay fast and deterministic.
+- Postgres test DB seeded from fixtures via Prisma at suite startup. Each test runs in a transaction that rolls back, so suites don't interfere.
+- `cube-core` carries a "known scrambles" corpus checked in (10–20 well-known scrambles + their solved states + canonical solutions) for regression confidence on parser, mover, and recognizer.
+
+### Coverage and gates
+
+- **`cube-core` has a coverage floor of ≥95% lines.** Correctness here cascades into recognition, scramble-to-case generation, future solver — bugs are expensive.
+- Other packages: ≥80% lines as soft target, not a hard gate.
+- **PR merge gates** (must pass): typecheck, lint, unit tests, API integration tests.
+- **Main-branch gates** (run on `main` and on PRs labeled `e2e`): Playwright E2E + Storybook visual regression. Cost-controlled — not every PR pays the E2E cost.
+- Performance: visualizer page has a Lighthouse budget enforced in CI (LCP < 2.5s, CLS < 0.1). Failing budgets block merge.
+
+### What we explicitly don't test
+
+- Full content corpus end-to-end — too brittle, too slow. Content correctness is enforced via schema validation (zod on YAML at build time) and a build-time link checker.
+- Third-party services (Google OAuth, Neon, Upstash) — mocked at the boundary. We trust their SLAs.
 
 ## 12. Deployment and environments
 
 - Environments: `dev` (local Docker Compose), `preview` (per-PR Vercel + Fly preview machines), `prod`.
-- Web: Vercel.
-- API: Fly.io with 2 small machines behind a load balancer; horizontal autoscale on CPU.
+- **Web** (`apps/web`): Vercel.
+- **API** (`apps/api`): Fly.io with 2 small machines behind a load balancer; horizontal autoscale on CPU. Multi-stage Dockerfile.
+- **Docs** (`apps/docs`): Cloudflare Pages. Static build (`pnpm --filter docs build` → `apps/docs/.vitepress/dist`). Custom domain `docs.<your-domain>`.
 - DB: Neon (branching per preview env is a huge dev-loop win).
 - CDN: Cloudflare in front of api.* for cacheable GETs.
-- Secrets: Doppler or Vercel/Fly env vars; nothing in repo.
+- Secrets: Vercel/Fly/Cloudflare env vars; nothing in repo.
 - Migrations: Prisma migrate, run in a one-shot Fly machine on deploy, gated by approval for prod.
 
 ## 13. Roadmap beyond v1
@@ -347,3 +378,70 @@ Tooling choices follow the same axis as the framework decision: **stable + maint
 
 ### Explicitly skipped
 - Nx, Bun in production, Biome, devcontainers, Lerna/Changesets, Doppler — see "What I'd skip" rationale in design conversation. Revisit when team or scope grows.
+
+## 17. Documentation site (VitePress)
+
+A standalone VitePress app at `apps/docs` serves project documentation: architecture, API reference, dev setup, ops runbooks, ADRs. Treated as a peer to `apps/web` and `apps/api` — same repo, independent build, independent deploy.
+
+### Why VitePress (and why a separate app)
+- Static-site generator — build output is plain HTML/JS/CSS, served from any CDN for free. No runtime, no DB, no auth, no scaling concerns.
+- Markdown-first authoring — contributors edit `.md` files; same review workflow as code.
+- Vue-based, but at runtime only the docs site uses Vue. The main web app stays React. pnpm workspaces keep their dep trees independent so neither bloats the other.
+- Lives in the same repo as code: docs PRs ride alongside the code change that needed them, atomic commits, single source of truth.
+
+### Layout
+
+```
+apps/docs/
+├── .vitepress/
+│   ├── config.ts          nav, sidebar, theme, search, head
+│   └── theme/             custom components if/when needed
+├── index.md               landing
+├── guide/
+│   ├── getting-started.md
+│   ├── monorepo-layout.md
+│   ├── local-dev.md       Docker Compose, make targets
+│   └── content-authoring.md   how to add an algorithm YAML
+├── architecture/
+│   ├── overview.md        mirrors §3
+│   ├── domain-model.md
+│   ├── frontend.md
+│   ├── backend.md
+│   ├── database.md
+│   ├── visualizer.md
+│   └── auth.md
+├── api/
+│   ├── overview.md
+│   └── reference.md       auto-rendered from OpenAPI spec
+├── ops/
+│   ├── deployment.md
+│   ├── runbook.md         oncall: DB down, API 5xx, cache eviction
+│   └── observability.md
+├── contributing/
+│   ├── conventions.md
+│   ├── testing.md
+│   └── commit-style.md
+└── decisions/
+    └── adr-0001-nestjs-over-fastify.md
+```
+
+### Tooling
+
+- **Search:** VitePress built-in local search (Minisearch). No third-party signup. Upgrade to Algolia DocSearch later if traffic warrants.
+- **Diagrams:** `vitepress-plugin-mermaid` for architecture/sequence diagrams in fenced code blocks.
+- **API reference:** generate Markdown from the OpenAPI spec emitted by `@nestjs/swagger`. A small build step (`pnpm --filter docs gen:api`) reads `apps/api/openapi.json` and writes `apps/docs/api/reference.md`. Runs in CI before docs build.
+- **ADRs:** lightweight — one decision per file, ~200 words. Sidebar auto-lists `decisions/`. Captures *why* — far cheaper than reconstructing later.
+- **Dev:** `pnpm --filter docs dev` runs on a separate port from web/api.
+- **Build:** `pnpm --filter docs build` → `apps/docs/.vitepress/dist`.
+
+### Deploy
+
+- Cloudflare Pages, custom domain `docs.<your-domain>`.
+- GitHub Actions workflow `deploy-docs.yml` on `main`: regenerate API reference from the latest OpenAPI spec, build, push.
+- Build is fast (<60s) and free; no preview-deploy gating needed but Cloudflare Pages auto-creates previews per PR.
+
+### Cross-linking with the main site
+
+- Main site footer gets a "Docs" link to the VitePress site.
+- VitePress nav links back to the main site landing.
+- No shared build pipeline — loose URLs only. This is intentional: keeps the docs site simple and decoupled.
