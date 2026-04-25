@@ -10,6 +10,8 @@ export class SetsService {
 
   async getSetBySlug(slug: string): Promise<AlgorithmSetWithCases> {
     const set = await this.prisma.algorithmSet.findFirst({
+      // Set slugs are unique within their method (@@unique([methodId, slug])); v1 content discipline
+      // keeps them globally distinct, but if a collision ever surfaces, lower displayOrder wins.
       where: { slug },
       orderBy: { displayOrder: 'asc' },
       select: {

@@ -10,6 +10,8 @@ export class CasesService {
 
   async getCaseBySlug(slug: string): Promise<AlgorithmCaseWithVariants> {
     const caseRow = await this.prisma.algorithmCase.findFirst({
+      // Case slugs are unique within their set (@@unique([setId, slug])); v1 content discipline
+      // keeps them globally distinct, but if a collision ever surfaces, lower displayOrder wins.
       where: { slug },
       orderBy: { displayOrder: 'asc' },
       select: {
