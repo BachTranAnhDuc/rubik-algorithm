@@ -893,64 +893,76 @@ packages/cube-core/
 │   ├── types.ts                      Move, Face, Algorithm, State
 │   ├── puzzle/
 │   │   ├── puzzle.interface.ts       generic Puzzle<TState, TMove>
-│   │   └── puzzle-3x3.ts             concrete 3x3 implementation
+│   │   ├── puzzle-3x3.ts             concrete 3x3 const composing flat exports
+│   │   └── puzzle-3x3.spec.ts
 │   ├── moves/
-│   │   ├── tokenizer.ts              string → tokens
-│   │   ├── parser.ts                 tokens → Move[]
+│   │   ├── parser.ts                 tokenization + parsing in one pass
 │   │   ├── moves-3x3.ts              definitions per move (cubies, axis, angle)
+│   │   ├── perm.ts                   sticker permutations per move
 │   │   ├── apply.ts                  state + move → state
 │   │   ├── inverse.ts
 │   │   ├── mirror.ts                 M / S / E axis
-│   │   └── cancel.ts                 R R' → ε,  R R → R2
+│   │   ├── cancel.ts                 R R' → ε,  R R → R2
+│   │   └── *.spec.ts                 colocated tests
 │   ├── algorithm/
-│   │   ├── operations.ts             concat, inverse, mirror, conjugate, commutator
-│   │   ├── metrics.ts                HTM, STM, ETM
-│   │   └── normalize.ts              cancel + reduce
+│   │   ├── operations.ts             concat, inverse, conjugate, commutator
+│   │   ├── metrics.ts                HTM, STM, ETM, QTM
+│   │   ├── normalize.ts              cancel + reduce
+│   │   └── *.spec.ts
 │   ├── state/
-│   │   ├── piece-model.ts
-│   │   ├── sticker-model.ts
-│   │   ├── conversion.ts             piece ↔ sticker
-│   │   ├── solved.ts                 canonical solved state
-│   │   ├── equality.ts
-│   │   └── hash.ts                   stable string/numeric hash
+│   │   ├── sticker-model.ts          54-sticker State + isSolved/equals/hash
+│   │   └── sticker-model.spec.ts
 │   ├── recognition/
 │   │   ├── pll.ts                    21 cases, AUF/rotation normalization
 │   │   ├── oll.ts                    57 cases
 │   │   ├── f2l.ts                    41 cases (per slot)
-│   │   └── normalize.ts              shared rotation/AUF helpers
-│   └── scramble/
-│       ├── wca-3x3.ts                WCA-style random move sequence
-│       ├── case-scramble.ts          random pre-state + inverse-of-solution
-│       └── rng.ts                    seeded RNG (deterministic for tests)
-├── __tests__/
-│   ├── apply.spec.ts
-│   ├── inverse.spec.ts
-│   ├── mirror.spec.ts
-│   ├── recognition.spec.ts
-│   ├── scramble.spec.ts
+│   │   ├── normalize.ts              shared rotation/AUF helpers
+│   │   └── *.spec.ts
+│   ├── scramble/
+│   │   ├── wca-3x3.ts                WCA-style random move sequence
+│   │   ├── case-scramble.ts          random pre-state + inverse-of-solution
+│   │   ├── rng.ts                    seeded RNG (deterministic for tests)
+│   │   ├── known-scrambles.spec.ts   regression against fixtures/
+│   │   └── *.spec.ts
 │   └── property/                     fast-check
-│       ├── inverse.property.ts       any seq + inverse(seq) = solved
-│       ├── mirror.property.ts        mirror(mirror(seq)) = seq
-│       └── canonicalization.property.ts
+│       ├── arbitraries.ts
+│       ├── inverse.spec.ts           any seq ∘ inverse(seq) = identity
+│       ├── mirror.spec.ts            mirror(mirror(seq)) = seq
+│       ├── canonicalization.spec.ts
+│       └── recognition.spec.ts
 ├── fixtures/
-│   ├── known-scrambles.json          ~20 famous scrambles + states + solutions
-│   ├── pll-cases.json                21 case-state fingerprints
-│   └── oll-cases.json                57 case-state fingerprints
+│   └── known-scrambles.json          ~20 scrambles + states + solutions
 ├── package.json
 └── tsconfig.json
 ```
+
+PLL/OLL/F2L canonical fingerprints are exported inline (`PLL_CANONICAL_STATES`, etc.) — no separate `pll-cases.json` / `oll-cases.json` fixtures. Piece-model + per-file split of `state/` (`piece-model`, `conversion`, `solved`, `equality`, `hash`) consolidated into `sticker-model.ts` (one file owns the full state surface).
 
 #### Public API
 
 ```ts
 import {
-  Puzzle3x3,
-  parseAlgorithm, applyAlgorithm,
-  invertAlgorithm, mirrorAlgorithm, normalizeAlgorithm,
-  scrambleWCA, scrambleIntoCase,
-  recognizePLL, recognizeOLL, recognizeF2L,
-  solvedState, fromStickerString, toStickerString, hashState,
-  htm, stm, etm,
+  Puzzle, Puzzle3x3, type ScrambleOptions,
+  parseAlgorithm, applyAlgorithm, applyMove,
+  invertAlgorithm, invertMove,
+  mirrorAlgorithm, mirrorMove, type MirrorPlane,
+  cancelMoves, normalize,
+  conjugate, commutator, concat,
+  wcaScramble, type WcaScrambleOptions,
+  scrambleIntoCase, stateForCase,
+  defaultRandom, mulberry32, randomChoice, randomInt, type Random,
+  recognizePll, recognizeOll, recognizeF2l,
+  PLL_ALGORITHMS, PLL_CANONICAL_STATES, PLL_IDS, type PllId, type PllRecognition,
+  OLL_ALGORITHMS, OLL_CANONICAL_STATES, OLL_IDS, type OllId, type OllRecognition,
+  F2L_ALGORITHMS, F2L_CANONICAL_STATES, F2L_IDS, type F2lId, type F2lRecognition,
+  AUF_ALGS, Y_ALGS, aufVariants, aufYVariants,
+  type AufCount, type StateVariant, type YRotationCount,
+  SOLVED_STATE, isSolved, stateEquals, hashState,
+  fromStickerString, toStickerString,
+  FACE_ORDER, FACE_OFFSET, STICKER_COUNT, stickerIndex,
+  formatMove, formatAlgorithm,
+  movePermutation, baseTurns,
+  htm, stm, etm, qtm,
 } from '@rubik/cube-core'
 ```
 

@@ -17,47 +17,40 @@ packages/cube-core/
 ├── src/
 │   ├── index.ts                       barrel
 │   ├── types.ts                       Move, Face, Algorithm, State
-│   ├── puzzle/{puzzle.interface.ts, puzzle-3x3.ts}
-│   ├── moves/{tokenizer,parser,moves-3x3,apply,inverse,mirror,cancel}.ts
-│   ├── algorithm/{operations,metrics,normalize}.ts
-│   ├── state/{piece-model,sticker-model,conversion,solved,equality,hash}.ts
-│   ├── recognition/{pll,oll,f2l,normalize}.ts
-│   └── scramble/{wca-3x3,case-scramble,rng}.ts
-├── fixtures/
-│   ├── known-scrambles.json           ~20 scrambles + states + canonical solutions
-│   ├── pll-cases.json                 21 case-state fingerprints
-│   └── oll-cases.json                 57 case-state fingerprints
-└── __tests__/
-    ├── apply.spec.ts
-    ├── inverse.spec.ts
-    ├── mirror.spec.ts
-    ├── recognition.spec.ts
-    ├── scramble.spec.ts
-    └── property/
-        ├── inverse.property.ts
-        ├── mirror.property.ts
-        └── canonicalization.property.ts
+│   ├── puzzle/{puzzle.interface.ts, puzzle-3x3.ts, puzzle-3x3.spec.ts}
+│   ├── moves/{parser,moves-3x3,perm,apply,inverse,mirror,cancel}.ts (+ specs)
+│   ├── algorithm/{operations,metrics,normalize}.ts (+ specs)
+│   ├── state/sticker-model.ts (+ spec)
+│   ├── recognition/{pll,oll,f2l,normalize}.ts (+ specs)
+│   ├── scramble/{wca-3x3,case-scramble,rng,known-scrambles}.ts (+ specs)
+│   └── property/{arbitraries.ts, inverse.spec.ts, mirror.spec.ts, canonicalization.spec.ts, recognition.spec.ts}
+└── fixtures/
+    └── known-scrambles.json           ~20 scrambles + states + canonical solutions
 ```
+
+PLL/OLL/F2L canonical fingerprints live inline as exports (`PLL_CANONICAL_STATES`, `OLL_CANONICAL_STATES`, `F2L_CANONICAL_STATES`), not separate JSON fixtures. State concerns (piece-model, conversion, solved, equality, hash) consolidated into `sticker-model.ts`. Tokenizer absorbed into `parser.ts` (single-pass tokenize + parse).
 
 ## Steps
 
-1. Scaffold package; add `vitest` and `fast-check` as devDeps.
-2. Implement piece + sticker models and conversions; verify with hand-computed solved states.
-3. Implement move parser/tokenizer for full WCA notation (faces, primes, doubles, wides, slices, rotations).
-4. Implement `apply.ts` allocation-free in hot paths (typed arrays). Move definitions in `moves-3x3.ts` (which cubies, which axis, which angle).
+1. Scaffold package; add `vitest`, `@vitest/coverage-v8`, and `fast-check` as devDeps.
+2. Implement sticker model + helpers (`SOLVED_STATE`, `isSolved`, `stateEquals`, `hashState`, `fromStickerString`, `toStickerString`); verify with hand-computed solved states.
+3. Implement move parser for full WCA notation (faces, primes, doubles, wides, slices, rotations) — tokenize + parse in one pass.
+4. Implement `apply.ts` (string-state representation; `perm.ts` carries per-move sticker permutations). Move definitions in `moves-3x3.ts` (which axis, which angle, wide/slice/rotation flag).
 5. Implement algorithm operations: inverse, mirror (M/S/E), conjugate, commutator, cancel, normalize.
-6. Implement recognition for PLL (21), OLL (57), F2L (41) with AUF/rotation normalization.
+6. Implement recognition for PLL (21), OLL (57), F2L (41) with AUF/y-rotation normalization.
 7. Implement WCA scrambler (random with no consecutive same-face/axis), seedable for tests; case-scramble (state + inverse-of-solution).
 8. Author `fixtures/known-scrambles.json` with at least 20 entries; add regression test that loads each and verifies state.
-9. Add property-based tests: `apply(seq) ∘ apply(inverse(seq)) = identity`, `mirror(mirror(seq)) = seq`, `cancel(normalize(x)) = cancel(x)`.
+9. Add property-based tests: `apply(seq) ∘ apply(inverse(seq)) = identity`, `mirror(mirror(seq)) = seq`, `cancel(normalize(x)) = cancel(x)`, recognition round-trip.
+10. Add `Puzzle<TState, TMove>` interface and `Puzzle3x3` const composing flat exports — the v2 extensibility seam called for by §20.1. Test the wiring by round-tripping through the interface only.
 
 ## Done when
 
-- [ ] `pnpm --filter @rubik/cube-core typecheck` clean.
-- [ ] Coverage ≥95% lines (locked in §11).
-- [ ] All property tests pass with default 100 runs.
-- [ ] All 21 PLLs and 57 OLLs round-trip: scramble into case → recognize → matches.
-- [ ] Public API matches §20.1 export list.
+- [x] `pnpm --filter @rubik/cube-core typecheck` clean.
+- [x] Coverage ≥95% lines (locked in §11). Currently 99.09%.
+- [x] All property tests pass with default 100 runs.
+- [x] All 21 PLLs and 57 OLLs round-trip: scramble into case → recognize → matches.
+- [x] Public API matches §20.1 export list.
+- [x] `Puzzle3x3` exported and round-trips a state through the interface only.
 
 ## Out of scope
 
