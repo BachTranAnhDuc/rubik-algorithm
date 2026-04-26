@@ -9,7 +9,7 @@ import type { Request, Response } from 'express'
 import type { Observable } from 'rxjs'
 import { tap } from 'rxjs/operators'
 
-import type { CurrentUser } from '../types/current-user'
+import type { AuthedUser } from '../types/authed-request'
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -18,7 +18,7 @@ export class LoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp()
     const request = http.getRequest<
-      Request & { id?: string; user?: CurrentUser }
+      Request & { id?: string; user?: AuthedUser }
     >()
     const response = http.getResponse<Response>()
     const start = Date.now()
@@ -32,7 +32,7 @@ export class LoggingInterceptor implements NestInterceptor {
   }
 
   private log(
-    request: Request & { id?: string; user?: CurrentUser },
+    request: Request & { id?: string; user?: AuthedUser },
     response: Response,
     start: number,
   ): void {
