@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { getCurrentUser } from '@/lib/auth/session'
 
 export default async function HomePage() {
@@ -9,9 +11,9 @@ export default async function HomePage() {
       {user ? (
         <p className="max-w-md text-center text-xl">
           Welcome back. Browse the{' '}
-          <a href="/3x3" className="text-primary underline-offset-4 hover:underline">
+          <Link href="/3x3" className="text-primary underline-offset-4 hover:underline">
             CFOP catalog
-          </a>{' '}
+          </Link>{' '}
           to track what you&apos;re learning.
         </p>
       ) : (

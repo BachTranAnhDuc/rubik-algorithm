@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { Button } from '@/components/ui/button'
 
 export default function CatalogNotFound() {
@@ -9,7 +11,7 @@ export default function CatalogNotFound() {
         catalog to keep browsing.
       </p>
       <Button asChild>
-        <a href="/3x3">Browse the catalog</a>
+        <Link href="/3x3">Browse the catalog</Link>
       </Button>
     </main>
   )

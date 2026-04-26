@@ -14,9 +14,9 @@ export const SiteHeader = async () => {
           rubik-algorithm
         </Link>
         <nav className="flex items-center gap-6">
-          <a href="/3x3" className="text-sm font-medium hover:underline">
+          <Link href="/3x3" className="text-sm font-medium hover:underline">
             Catalog
-          </a>
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           {user ? (
