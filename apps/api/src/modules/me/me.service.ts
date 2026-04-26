@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common'
-import { Prisma, type User, type UserAlgorithm } from '@prisma/client'
+import { Prisma, type UserAlgorithm } from '@prisma/client'
 import type { UpdateUserAlgorithm } from '@rubik/shared'
 import { PrismaService } from 'nestjs-prisma'
 
 import { CaseNotFoundException } from '../catalog/exceptions'
-import { ChosenVariantInvalidException } from './exceptions'
+import { ChosenVariantInvalidException, UserNotFoundException } from './exceptions'
 
 type AlgorithmDataPatch = {
   status?: NonNullable<UpdateUserAlgorithm['status']>
@@ -24,8 +24,30 @@ const buildAlgorithmData = (body: UpdateUserAlgorithm): AlgorithmDataPatch => {
 export class MeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getCurrent(userId: string): Promise<User> {
-    return this.prisma.user.findUniqueOrThrow({ where: { id: userId } })
+  async getCurrent(userId: string): Promise<{
+    id: string
+    email: string
+    displayName: string | null
+    avatarUrl: string | null
+    createdAt: Date
+  }> {
+    try {
+      return await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+        },
+      })
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        throw new UserNotFoundException(userId)
+      }
+      throw err
+    }
   }
 
   listAlgorithms(userId: string): Promise<UserAlgorithm[]> {

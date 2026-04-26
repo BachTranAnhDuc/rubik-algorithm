@@ -4,7 +4,7 @@ import { PrismaService } from 'nestjs-prisma'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { CaseNotFoundException } from '../../catalog/exceptions'
-import { ChosenVariantInvalidException } from '../exceptions'
+import { ChosenVariantInvalidException, UserNotFoundException } from '../exceptions'
 import { MeService } from '../me.service'
 
 const buildPrismaMock = () => ({
@@ -39,14 +39,58 @@ describe('MeService', () => {
   })
 
   describe('getCurrent', () => {
-    it('returns the user via findUniqueOrThrow', async () => {
-      prisma.user.findUniqueOrThrow.mockResolvedValue({ id: 'u1', email: 'a@b.com' })
+    it('returns the public user shape via findUniqueOrThrow with select', async () => {
+      const createdAt = new Date('2026-01-01T00:00:00Z')
+      prisma.user.findUniqueOrThrow.mockResolvedValue({
+        id: 'u1',
+        email: 'a@b.com',
+        displayName: 'Ana',
+        avatarUrl: null,
+        createdAt,
+      })
       const service = await compileModule(prisma)
 
       const result = await service.getCurrent('u1')
 
-      expect(result).toEqual({ id: 'u1', email: 'a@b.com' })
-      expect(prisma.user.findUniqueOrThrow).toHaveBeenCalledWith({ where: { id: 'u1' } })
+      expect(result).toEqual({
+        id: 'u1',
+        email: 'a@b.com',
+        displayName: 'Ana',
+        avatarUrl: null,
+        createdAt,
+      })
+      expect(prisma.user.findUniqueOrThrow).toHaveBeenCalledWith({
+        where: { id: 'u1' },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+        },
+      })
+    })
+
+    it('throws UserNotFoundException when user row missing (P2025)', async () => {
+      const notFound = new Prisma.PrismaClientKnownRequestError('not found', {
+        code: 'P2025',
+        clientVersion: 'test',
+      })
+      prisma.user.findUniqueOrThrow.mockRejectedValue(notFound)
+      const service = await compileModule(prisma)
+
+      await expect(service.getCurrent('u1')).rejects.toBeInstanceOf(UserNotFoundException)
+    })
+
+    it('rethrows non-P2025 prisma errors', async () => {
+      const otherError = new Prisma.PrismaClientKnownRequestError('other', {
+        code: 'P2002',
+        clientVersion: 'test',
+      })
+      prisma.user.findUniqueOrThrow.mockRejectedValue(otherError)
+      const service = await compileModule(prisma)
+
+      await expect(service.getCurrent('u1')).rejects.toBe(otherError)
     })
   })
 

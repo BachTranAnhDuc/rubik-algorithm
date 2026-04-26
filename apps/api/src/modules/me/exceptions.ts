@@ -18,3 +18,16 @@ export class ChosenVariantInvalidException extends HttpException {
     )
   }
 }
+
+export class UserNotFoundException extends HttpException {
+  constructor(userId: string) {
+    super(
+      buildPayload(
+        'user_not_found',
+        'Authenticated user no longer exists',
+        { userId },
+      ),
+      HttpStatus.UNAUTHORIZED,
+    )
+  }
+}
