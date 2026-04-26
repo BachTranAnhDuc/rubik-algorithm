@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
 
+import { SiteHeader } from '@/components/layout/site-header'
 import { RootProviders } from '@/providers/root-providers'
 
 import './globals.css'
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <RootProviders>
+          <SiteHeader />
           {children}
           <Toaster richColors position="top-right" />
         </RootProviders>
