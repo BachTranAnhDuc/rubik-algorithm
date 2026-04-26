@@ -17,6 +17,12 @@ export class GoogleVerifierService {
   private readonly audience: string
 
   constructor(private readonly config: ConfigService) {
+    // env.schema's .refine guarantees GOOGLE_CLIENT_ID is set outside NODE_ENV=test,
+    // so the '' fallback only fires under test. google-auth-library's verifyIdToken
+    // still enforces audience match in oauth2client.js — every real payload's `aud`
+    // is a non-empty Google client ID, so `aud !== ''` rejects every token.
+    // Fail-closed, not bypass: do NOT "clean up" to `?? undefined`, which would
+    // disable audience validation entirely and silently regress security.
     this.audience = this.config.get('GOOGLE_CLIENT_ID') ?? ''
     this.client = new OAuth2Client(this.audience)
   }
