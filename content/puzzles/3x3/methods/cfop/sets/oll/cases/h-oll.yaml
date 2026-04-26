@@ -1,0 +1,17 @@
+slug: h-oll
+name: H
+display_name: H (OLL 21)
+display_order: 2
+case_state: "LURUUULURUFUFFFFFFFBBRRRRRRDDDDDDDDDBRFLLLLLLULUBBBBBB"
+recognition_md: |
+  All four corners twisted; symmetric "H" pattern of yellow stickers on the U face.
+tags:
+  - oll
+  - corner-orientation
+  - symmetric
+variants:
+  - notation: "R U2 R' U' R U R' U' R U' R'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null
