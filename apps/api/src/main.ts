@@ -24,9 +24,15 @@ const bootstrap = async () => {
 
   const config = app.get(ConfigService)
   const corsOrigins = config.get('CORS_ORIGINS')
-  if (corsOrigins) {
+  const isDev = config.get('NODE_ENV') !== 'production'
+  const origins = corsOrigins
+    ? corsOrigins.split(',').map((s) => s.trim())
+    : isDev
+      ? ['http://localhost:3000']
+      : null
+  if (origins) {
     app.enableCors({
-      origin: corsOrigins.split(',').map((s) => s.trim()),
+      origin: origins,
       credentials: false,
     })
   }

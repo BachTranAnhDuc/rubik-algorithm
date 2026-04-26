@@ -60,7 +60,7 @@ export const CommandPalette = () => {
               {results.hits.map((h) => (
                 <CommandItem
                   key={h.caseId}
-                  value={`case-${h.caseId}`}
+                  value={`${h.caseName} ${h.methodSlug} ${h.setSlug}`}
                   onSelect={() =>
                     navigate(
                       `/${h.puzzleSlug}/${h.methodSlug}/${h.setSlug}/${h.caseSlug}`,
@@ -78,12 +78,12 @@ export const CommandPalette = () => {
           </>
         ) : null}
         <CommandGroup heading="Navigation">
-          <CommandItem value="nav-catalog" onSelect={() => navigate('/3x3')}>
+          <CommandItem value="Browse catalog" onSelect={() => navigate('/3x3')}>
             Browse catalog
           </CommandItem>
           {session ? (
             <CommandItem
-              value="nav-my-algorithms"
+              value="My algorithms"
               onSelect={() => navigate('/me/algorithms')}
             >
               My algorithms
@@ -92,7 +92,7 @@ export const CommandPalette = () => {
         </CommandGroup>
         <CommandGroup heading="Actions">
           <CommandItem
-            value="action-toggle-theme"
+            value="Toggle theme dark light"
             onSelect={() => {
               setOpen(false)
               setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -102,13 +102,13 @@ export const CommandPalette = () => {
           </CommandItem>
           {session ? (
             <CommandItem
-              value="action-sign-out"
+              value="Sign out"
               onSelect={() => navigate('/api/auth/signout')}
             >
               Sign out
             </CommandItem>
           ) : (
-            <CommandItem value="action-sign-in" onSelect={() => navigate('/login')}>
+            <CommandItem value="Sign in" onSelect={() => navigate('/login')}>
               Sign in
             </CommandItem>
           )}
