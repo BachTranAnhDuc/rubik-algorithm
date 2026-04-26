@@ -1,0 +1,16 @@
+slug: f2l-3
+name: F2L 3
+display_name: F2L 3 (basic insert, slot empty, second variant)
+display_order: 2
+case_state: "UUFUUFRUUDRRFFUFFUBRRFRRFRRDDLDDDDDDLLFLLLLLLUBBBBBBBB"
+recognition_md: |
+  Corner+edge pair adjacent on U-layer with edge above target slot; insert via U' R U R'.
+tags:
+  - f2l
+  - basic
+variants:
+  - notation: "U' R U R'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null

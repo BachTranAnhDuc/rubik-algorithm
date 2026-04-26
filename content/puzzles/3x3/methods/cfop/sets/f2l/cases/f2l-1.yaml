@@ -1,0 +1,16 @@
+slug: f2l-1
+name: F2L 1
+display_name: F2L 1 (basic insert, slot empty)
+display_order: 0
+case_state: "UULUUFUUFFFDFFUFFFRRUBRRURRDDRDDDDDDBLLLLLLLLBRRBBBBBB"
+recognition_md: |
+  Corner+edge pair already aligned in the U-layer; insert into the FR slot via U R U' R'.
+tags:
+  - f2l
+  - basic
+variants:
+  - notation: "U R U' R'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null
