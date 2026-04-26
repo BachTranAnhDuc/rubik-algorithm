@@ -15,6 +15,8 @@ import { AuthModule } from './modules/auth/auth.module'
 import { CatalogModule } from './modules/catalog/catalog.module'
 import { HealthModule } from './modules/health/health.module'
 import { MeModule } from './modules/me/me.module'
+import { ScrambleModule } from './modules/scramble/scramble.module'
+import { SearchModule } from './modules/search/search.module'
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { MeModule } from './modules/me/me.module'
     AuthModule,
     CatalogModule,
     MeModule,
+    ScrambleModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
