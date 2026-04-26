@@ -1,11 +1,11 @@
-'use client'
-
-import { signOut } from 'next-auth/react'
-
 import { Button } from '@/components/ui/button'
 
+import { serverSignOut } from './sign-out-action'
+
 export const SignOutButton = () => (
-  <Button variant="outline" onClick={() => signOut({ callbackUrl: '/' })}>
-    Sign out
-  </Button>
+  <form action={serverSignOut}>
+    <Button variant="outline" type="submit">
+      Sign out
+    </Button>
+  </form>
 )
