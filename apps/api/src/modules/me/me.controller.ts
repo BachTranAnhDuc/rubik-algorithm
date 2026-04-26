@@ -9,8 +9,7 @@ import {
   Put,
 } from '@nestjs/common'
 import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
-import type { UserAlgorithm } from '@prisma/client'
-import type { User } from '@rubik/shared'
+import type { User, UserAlgorithm } from '@rubik/shared'
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import type { AuthedUser } from '../../common/types/authed-request'

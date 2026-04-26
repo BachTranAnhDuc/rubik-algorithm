@@ -95,17 +95,28 @@ describe('MeService', () => {
   })
 
   describe('listAlgorithms', () => {
-    it('returns user algorithms ordered by updatedAt desc', async () => {
+    it('returns user algorithms ordered by updatedAt desc with ISO strings', async () => {
+      const updatedAt = new Date('2026-01-02T00:00:00Z')
       prisma.userAlgorithm.findMany.mockResolvedValue([
-        { userId: 'u1', caseId: 'c1', status: 'LEARNING', chosenVariantId: null, personalNotesMd: null, updatedAt: new Date() },
+        { caseId: 'c1', status: 'LEARNING', chosenVariantId: null, personalNotesMd: null, updatedAt },
       ])
       const service = await compileModule(prisma)
 
-      await service.listAlgorithms('u1')
+      const result = await service.listAlgorithms('u1')
 
+      expect(result).toEqual([
+        { caseId: 'c1', status: 'LEARNING', chosenVariantId: null, personalNotesMd: null, updatedAt: '2026-01-02T00:00:00.000Z' },
+      ])
       expect(prisma.userAlgorithm.findMany).toHaveBeenCalledWith({
         where: { userId: 'u1' },
         orderBy: { updatedAt: 'desc' },
+        select: {
+          caseId: true,
+          chosenVariantId: true,
+          status: true,
+          personalNotesMd: true,
+          updatedAt: true,
+        },
       })
     })
   })
@@ -136,12 +147,11 @@ describe('MeService', () => {
     it('skips variant validation when chosenVariantId is null', async () => {
       prisma.algorithmCase.findFirst.mockResolvedValue({ id: 'c1' })
       prisma.userAlgorithm.upsert.mockResolvedValue({
-        userId: 'u1',
         caseId: 'c1',
         chosenVariantId: null,
         status: 'LEARNED',
         personalNotesMd: null,
-        updatedAt: new Date(),
+        updatedAt: new Date('2026-01-03T00:00:00Z'),
       })
       const service = await compileModule(prisma)
 
@@ -152,6 +162,13 @@ describe('MeService', () => {
         where: { userId_caseId: { userId: 'u1', caseId: 'c1' } },
         create: { userId: 'u1', caseId: 'c1', chosenVariantId: null, status: 'LEARNED' },
         update: { chosenVariantId: null, status: 'LEARNED' },
+        select: {
+          caseId: true,
+          chosenVariantId: true,
+          status: true,
+          personalNotesMd: true,
+          updatedAt: true,
+        },
       })
     })
 
@@ -159,12 +176,11 @@ describe('MeService', () => {
       prisma.algorithmCase.findFirst.mockResolvedValue({ id: 'c1' })
       prisma.algorithmVariant.findFirst.mockResolvedValue({ id: 'v1' })
       prisma.userAlgorithm.upsert.mockResolvedValue({
-        userId: 'u1',
         caseId: 'c1',
         chosenVariantId: 'v1',
         status: 'LEARNING',
         personalNotesMd: 'note',
-        updatedAt: new Date(),
+        updatedAt: new Date('2026-01-03T00:00:00Z'),
       })
       const service = await compileModule(prisma)
 
@@ -185,6 +201,13 @@ describe('MeService', () => {
           personalNotesMd: 'note',
         },
         update: { chosenVariantId: 'v1', status: 'LEARNING', personalNotesMd: 'note' },
+        select: {
+          caseId: true,
+          chosenVariantId: true,
+          status: true,
+          personalNotesMd: true,
+          updatedAt: true,
+        },
       })
     })
   })

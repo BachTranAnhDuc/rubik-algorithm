@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
-import { Prisma, type UserAlgorithm } from '@prisma/client'
-import type { UpdateUserAlgorithm, User } from '@rubik/shared'
+import { Prisma } from '@prisma/client'
+import type { UpdateUserAlgorithm, User, UserAlgorithm } from '@rubik/shared'
 import { PrismaService } from 'nestjs-prisma'
 
 import { CaseNotFoundException } from '../catalog/exceptions'
@@ -45,11 +45,19 @@ export class MeService {
     }
   }
 
-  listAlgorithms(userId: string): Promise<UserAlgorithm[]> {
-    return this.prisma.userAlgorithm.findMany({
+  async listAlgorithms(userId: string): Promise<UserAlgorithm[]> {
+    const rows = await this.prisma.userAlgorithm.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
+      select: {
+        caseId: true,
+        chosenVariantId: true,
+        status: true,
+        personalNotesMd: true,
+        updatedAt: true,
+      },
     })
+    return rows.map((row) => ({ ...row, updatedAt: row.updatedAt.toISOString() }))
   }
 
   async upsertAlgorithm(
@@ -73,11 +81,19 @@ export class MeService {
     }
 
     const data = buildAlgorithmData(body)
-    return this.prisma.userAlgorithm.upsert({
+    const row = await this.prisma.userAlgorithm.upsert({
       where: { userId_caseId: { userId, caseId } },
       create: { userId, caseId, ...data },
       update: { ...data },
+      select: {
+        caseId: true,
+        chosenVariantId: true,
+        status: true,
+        personalNotesMd: true,
+        updatedAt: true,
+      },
     })
+    return { ...row, updatedAt: row.updatedAt.toISOString() }
   }
 
   async deleteAlgorithm(userId: string, caseSlug: string): Promise<void> {
