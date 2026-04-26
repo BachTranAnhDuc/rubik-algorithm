@@ -2,15 +2,20 @@ import type { Metadata, Route } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import type { UserAlgorithm } from '@rubik/shared'
+
 import { VariantList } from '@/components/algorithm/variant-list'
 import { CubeStateDiagram } from '@/components/cube/cube-state-diagram'
+import { TrackCaseButton } from '@/components/track-case/track-case-button'
 import {
   getCaseWithVariants,
   getMethods,
   getSets,
   getSetWithCases,
 } from '@/features/catalog/catalog-fetchers'
+import { getMyAlgorithms } from '@/features/me/me-fetchers'
 import type { ApiError } from '@/lib/api-client'
+import { auth } from '@/lib/auth/auth.config'
 import { Markdown } from '@/lib/markdown'
 
 export const revalidate = 600
@@ -60,8 +65,10 @@ const HERO_SIZE = 320
 export default async function CasePage({ params }: PageProps) {
   const { method, set, case: caseSlug } = await params
 
+  const session = await auth()
   let caseData
   let setData
+  let myAlgorithm: UserAlgorithm | null = null
   try {
     ;[caseData, setData] = await Promise.all([
       getCaseWithVariants(caseSlug),
@@ -70,6 +77,14 @@ export default async function CasePage({ params }: PageProps) {
   } catch (err) {
     if ((err as ApiError).status === 404) notFound()
     throw err
+  }
+  if (session?.apiAccessToken) {
+    try {
+      const list = await getMyAlgorithms(session.apiAccessToken)
+      myAlgorithm = list.find((u) => u.caseId === caseData.id) ?? null
+    } catch {
+      myAlgorithm = null
+    }
   }
 
   return (
@@ -97,6 +112,23 @@ export default async function CasePage({ params }: PageProps) {
       </nav>
 
       <h1 className="mb-8 text-4xl font-bold">{caseData.displayName}</h1>
+
+      <div className="mb-8">
+        {session?.apiAccessToken ? (
+          <TrackCaseButton
+            caseId={caseData.id}
+            caseSlug={caseData.slug}
+            initialAlgorithm={myAlgorithm}
+          />
+        ) : (
+          <Link
+            href={'/login?next=/3x3/cfop/pll/t-perm' as Route}
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            Sign in to track this case
+          </Link>
+        )}
+      </div>
 
       <div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
         <div className="shrink-0">
