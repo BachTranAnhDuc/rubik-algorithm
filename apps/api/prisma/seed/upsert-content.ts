@@ -152,7 +152,7 @@ const upsertCasesAndVariants = async (
 
     await prisma.algorithmVariant.deleteMany({ where: { caseId: row.id } })
     const created = await prisma.algorithmVariant.createMany({
-      data: c.data.variants.map((v) => {
+      data: c.data.variants.map((v, idx) => {
         const moves = parseAlgorithm(v.notation)
         return {
           caseId: row.id,
@@ -162,6 +162,7 @@ const upsertCasesAndVariants = async (
           isPrimary: v.is_primary,
           attribution: v.attribution ?? null,
           fingertrickMd: v.fingertrick_md ?? null,
+          displayOrder: idx,
         }
       }),
     })

@@ -66,7 +66,6 @@ const buildBundle = (): ValidatedBundle => ({
             is_primary: true,
             attribution: null,
             fingertrick_md: null,
-            video_url: null,
           },
         ],
       },

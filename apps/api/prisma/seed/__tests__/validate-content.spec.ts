@@ -57,7 +57,6 @@ const validCase = (overrides: Record<string, unknown> = {}): LoadedCase => ({
         is_primary: true,
         attribution: null,
         fingertrick_md: null,
-        video_url: null,
       },
     ],
     ...overrides,
@@ -84,8 +83,8 @@ describe('validateContent', () => {
   it('rejects a case with two is_primary variants', () => {
     const bad = validCase({
       variants: [
-        { notation: TPERM_ALG, is_primary: true, attribution: null, fingertrick_md: null, video_url: null },
-        { notation: "R U R'", is_primary: true, attribution: null, fingertrick_md: null, video_url: null },
+        { notation: TPERM_ALG, is_primary: true, attribution: null, fingertrick_md: null },
+        { notation: "R U R'", is_primary: true, attribution: null, fingertrick_md: null },
       ],
     })
     expect(() => validateContent(buildBundle({ cases: [bad] }))).toThrow(/is_primary/)
@@ -94,7 +93,7 @@ describe('validateContent', () => {
   it('rejects a case whose primary notation does not solve case_state', () => {
     const bad = validCase({
       variants: [
-        { notation: "R U R'", is_primary: true, attribution: null, fingertrick_md: null, video_url: null },
+        { notation: "R U R'", is_primary: true, attribution: null, fingertrick_md: null },
       ],
     })
     expect(() => validateContent(buildBundle({ cases: [bad] }))).toThrow(/does not solve case_state/)

@@ -5,10 +5,11 @@ import { SlugSchema } from '../utils/slug'
 
 const CASE_STATE_LENGTH = 54
 
-// Note: display_name on Puzzle/AlgorithmSet and description_md on AlgorithmSet are deferred
-// until the API surface needs them. Today the Prisma schema and the @rubik/shared API DTOs
-// don't carry these fields, so accepting them here would be silent data loss on seed.
-// Re-add when (a) the columns land via migration AND (b) the API returns them.
+// Note: display_name on Puzzle/AlgorithmSet, description_md on AlgorithmSet, and video_url
+// on AlgorithmVariant are deferred until the API surface needs them. Today the Prisma schema
+// and the @rubik/shared API DTOs don't carry these fields, so accepting them here would be
+// silent data loss on seed. Re-add when (a) the columns land via migration AND (b) the API
+// returns them.
 export const PuzzleContentSchema = z.object({
   slug: SlugSchema,
   name: z.string().min(1),
@@ -37,7 +38,6 @@ export const VariantContentSchema = z.object({
   is_primary: z.boolean().default(false),
   attribution: z.string().nullable().optional(),
   fingertrick_md: z.string().nullable().optional(),
-  video_url: z.string().url().nullable().optional(),
 })
 
 export const CaseContentSchema = z
