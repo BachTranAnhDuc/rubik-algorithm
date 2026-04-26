@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common'
 import type { Request, Response } from 'express'
+import { ZodValidationException } from 'nestjs-zod'
 import { ZodError } from 'zod'
 
 import type { ErrorResponse } from '../dtos/error.dto'
@@ -45,6 +46,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
             code: 'validation_error',
             message: 'Request validation failed',
             details: exception.issues,
+          },
+        },
+      }
+    }
+
+    if (exception instanceof ZodValidationException) {
+      return {
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        body: {
+          error: {
+            code: 'validation_error',
+            message: 'Request validation failed',
+            details: exception.getZodError().issues,
           },
         },
       }
