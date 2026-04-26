@@ -1,5 +1,4 @@
-import { Test } from '@nestjs/testing'
-import { PrismaService } from 'nestjs-prisma'
+import type { PrismaClient } from '@prisma/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { upsertContent } from '../upsert-content'
@@ -75,18 +74,14 @@ const buildBundle = (): ValidatedBundle => ({
   ],
 })
 
-const compileService = async (prismaMock: ReturnType<typeof buildPrismaMock>) => {
+const compileService = (prismaMock: ReturnType<typeof buildPrismaMock>): PrismaClient => {
   prismaMock.puzzle.upsert.mockResolvedValue({ id: 'puz_1', slug: '3x3' })
   prismaMock.method.upsert.mockResolvedValue({ id: 'mth_1', slug: 'cfop' })
   prismaMock.algorithmSet.upsert.mockResolvedValue({ id: 'set_1', slug: 'pll' })
   prismaMock.algorithmCase.upsert.mockResolvedValue({ id: 'case_1', slug: 't-perm' })
   prismaMock.algorithmVariant.deleteMany.mockResolvedValue({ count: 0 })
   prismaMock.algorithmVariant.createMany.mockResolvedValue({ count: 1 })
-
-  const moduleRef = await Test.createTestingModule({
-    providers: [{ provide: PrismaService, useValue: prismaMock }],
-  }).compile()
-  return moduleRef.get(PrismaService)
+  return prismaMock as unknown as PrismaClient
 }
 
 describe('upsertContent', () => {
@@ -97,7 +92,7 @@ describe('upsertContent', () => {
   })
 
   it('upserts in Puzzle → Method → Set → Case → Variant order', async () => {
-    const service = await compileService(prisma)
+    const service = compileService(prisma)
     const order: string[] = []
     prisma.puzzle.upsert.mockImplementationOnce(async () => {
       order.push('puzzle')
@@ -130,7 +125,7 @@ describe('upsertContent', () => {
   })
 
   it('replaces variants per case via deleteMany + createMany', async () => {
-    const service = await compileService(prisma)
+    const service = compileService(prisma)
 
     await upsertContent(service, buildBundle(), { prune: false })
 
@@ -147,7 +142,7 @@ describe('upsertContent', () => {
   })
 
   it('does NOT delete orphan rows when prune is false', async () => {
-    const service = await compileService(prisma)
+    const service = compileService(prisma)
     prisma.algorithmCase.findMany.mockResolvedValueOnce([
       { id: 'old_case', slug: 'old-case', setId: 'set_1' },
     ])
@@ -159,7 +154,7 @@ describe('upsertContent', () => {
   })
 
   it('deletes orphan rows when prune is true', async () => {
-    const service = await compileService(prisma)
+    const service = compileService(prisma)
     prisma.algorithmCase.findMany.mockResolvedValueOnce([
       { id: 'orphan_case', slug: 'old-case', setId: 'set_1' },
       { id: 'case_1', slug: 't-perm', setId: 'set_1' },

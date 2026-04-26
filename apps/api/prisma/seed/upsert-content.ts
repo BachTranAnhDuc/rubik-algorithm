@@ -1,5 +1,5 @@
+import type { PrismaClient } from '@prisma/client'
 import { htm, parseAlgorithm, stm } from '@rubik/cube-core'
-import type { PrismaService } from 'nestjs-prisma'
 
 import type { ValidatedBundle } from './validate-content'
 
@@ -16,7 +16,7 @@ export interface UpsertResult {
 }
 
 const upsertPuzzles = async (
-  prisma: PrismaService,
+  prisma: PrismaClient,
   bundle: ValidatedBundle,
 ): Promise<Map<string, string>> => {
   const slugToId = new Map<string, string>()
@@ -44,7 +44,7 @@ const upsertPuzzles = async (
 }
 
 const upsertMethods = async (
-  prisma: PrismaService,
+  prisma: PrismaClient,
   bundle: ValidatedBundle,
   puzzleIds: Map<string, string>,
 ): Promise<Map<string, string>> => {
@@ -76,7 +76,7 @@ const upsertMethods = async (
 }
 
 const upsertSets = async (
-  prisma: PrismaService,
+  prisma: PrismaClient,
   bundle: ValidatedBundle,
   methodIds: Map<string, string>,
 ): Promise<Map<string, string>> => {
@@ -110,7 +110,7 @@ const upsertSets = async (
 }
 
 const upsertCasesAndVariants = async (
-  prisma: PrismaService,
+  prisma: PrismaClient,
   bundle: ValidatedBundle,
   setIds: Map<string, string>,
 ): Promise<{ caseIds: Map<string, string>; variantsWritten: number }> => {
@@ -172,7 +172,7 @@ const upsertCasesAndVariants = async (
 }
 
 const pruneOrphans = async (
-  prisma: PrismaService,
+  prisma: PrismaClient,
   caseIds: Map<string, string>,
   setIds: Map<string, string>,
   methodIds: Map<string, string>,
@@ -216,7 +216,7 @@ const pruneOrphans = async (
 }
 
 export const upsertContent = async (
-  prisma: PrismaService,
+  prisma: PrismaClient,
   bundle: ValidatedBundle,
   options: UpsertOptions,
 ): Promise<UpsertResult> => {
