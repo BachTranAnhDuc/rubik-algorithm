@@ -1,0 +1,17 @@
+slug: f2l-2
+name: F2L 2
+display_name: F2L 2 (mirror of F2L 1)
+display_order: 1
+case_state: "FUUUUUULLRFFFFLFFDURRRRRRRRBDDDDDDDDFFLLLULLUBBLBBBBBB"
+recognition_md: |
+  Mirror of F2L 1 — corner+edge pair aligned on the L side; insert via y U' L' U L y'.
+tags:
+  - f2l
+  - basic
+  - mirror
+variants:
+  - notation: "y U' L' U L y'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null

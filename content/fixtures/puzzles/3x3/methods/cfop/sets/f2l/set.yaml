@@ -1,0 +1,5 @@
+slug: f2l
+name: F2L
+case_count_expected: 41
+recognition_basis: F2L_SLOT
+display_order: 0

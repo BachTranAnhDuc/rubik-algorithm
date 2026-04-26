@@ -1,0 +1,17 @@
+slug: anti-sune
+name: Anti-Sune
+display_name: Anti-Sune (OLL 26)
+display_order: 1
+case_state: "FUUUUURUBUFLFFFFFFULLRRRRRRDDDDDDDDDUBBLLLLLLFRRBBBBBB"
+recognition_md: |
+  Mirror of Sune — three corners oriented; one corner twisted counter-clockwise.
+tags:
+  - oll
+  - corner-orientation
+  - mirror
+variants:
+  - notation: "R U2 R' U' R U' R'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null

@@ -1,0 +1,16 @@
+slug: sune
+name: Sune
+display_name: Sune (OLL 27)
+display_order: 0
+case_state: "RUFUUUUULBFUFFFFFFBBURRRRRRDDDDDDDDDFRRLLLLLLLLUBBBBBB"
+recognition_md: |
+  Three corners oriented; one corner twisted clockwise. The FRU corner faces forward.
+tags:
+  - oll
+  - corner-orientation
+variants:
+  - notation: "R U R' U R U2 R'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null

@@ -1,0 +1,5 @@
+slug: pll
+name: PLL
+case_count_expected: 21
+recognition_basis: PLL_PERMUTATION
+display_order: 2
