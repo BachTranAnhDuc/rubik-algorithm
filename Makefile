@@ -85,11 +85,11 @@ db.format: ## Canonicalize prisma/schema.prisma
 # -- Content ----------------------------------------------------------------
 .PHONY: content.validate
 content.validate: ## Validate content/ YAML (no DB writes)
-	$(PNPM) --filter @rubik/api tsx prisma/seed.ts --validate-only
+	$(PNPM) --filter @rubik/api exec tsx prisma/seed.ts --validate-only
 
 .PHONY: content.diff
 content.diff: ## Show DB ⇄ YAML drift
-	$(PNPM) --filter @rubik/api tsx prisma/seed.ts --dry-run
+	$(PNPM) --filter @rubik/api exec tsx prisma/seed.ts --dry-run
 
 .PHONY: content.seed
 content.seed: db.seed ## Alias for db.seed
