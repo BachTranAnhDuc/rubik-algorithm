@@ -43,7 +43,6 @@
     "node": ">=24"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "4",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
