@@ -3,6 +3,7 @@ import Google from 'next-auth/providers/google'
 
 import { serverEnv } from '../env.server'
 import { googleHandshake } from './google-handshake'
+import { refreshApiTokens } from './refresh'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: serverEnv.AUTH_SECRET,
@@ -26,8 +27,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.apiAccessToken = pair.accessToken
           token.apiRefreshToken = pair.refreshToken
           token.apiExpiresAt = Date.now() + pair.expiresIn * 1000
+          return token
         } catch {
           return null
+        }
+      }
+      if (token.apiAccessToken && token.apiRefreshToken && token.apiExpiresAt) {
+        const SKEW_MS = 60_000
+        if (token.apiExpiresAt - Date.now() < SKEW_MS) {
+          try {
+            const pair = await refreshApiTokens(token.apiRefreshToken)
+            token.apiAccessToken = pair.accessToken
+            token.apiRefreshToken = pair.refreshToken
+            token.apiExpiresAt = Date.now() + pair.expiresIn * 1000
+          } catch {
+            return null
+          }
         }
       }
       return token
