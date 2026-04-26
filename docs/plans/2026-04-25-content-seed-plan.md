@@ -150,7 +150,7 @@ slug: t-perm
 name: T-Perm
 display_name: T-Perm
 display_order: 0
-case_state: "UUUUUUUUUFRFRRRRRRRFRFFFFFFDDDDDDDDDLBLLLLLLLBLBBBBBBB"
+case_state: "UUUUUUUUUFFRFFFFFFBLFRRRRRRDDDDDDDDDLRLLLLLLLRBBBBBBBB"
 recognition_md: null
 tags:
   - pll
@@ -430,7 +430,7 @@ const validSet = (data: Record<string, unknown> = {}) => ({
   },
 })
 
-const TPERM_STATE = 'UUUUUUUUUFRFRRRRRRRFRFFFFFFDDDDDDDDDLBLLLLLLLBLBBBBBBB'
+const TPERM_STATE = 'UUUUUUUUUFFRFFFFFFBLFRRRRRRDDDDDDDDDLRLLLLLLLRBBBBBBBB'
 const TPERM_ALG = "R U R' U' R' F R2 U' R' U' R U R' F'"
 
 const validCase = (overrides: Record<string, unknown> = {}): LoadedCase => ({
@@ -730,7 +730,7 @@ const buildBundle = (): ValidatedBundle => ({
         name: 'T-Perm',
         display_name: 'T-Perm',
         display_order: 0,
-        case_state: 'UUUUUUUUUFRFRRRRRRRFRFFFFFFDDDDDDDDDLBLLLLLLLBLBBBBBBB',
+        case_state: 'UUUUUUUUUFFRFFFFFFBLFRRRRRRDDDDDDDDDLRLLLLLLLRBBBBBBBB',
         recognition_md: null,
         tags: ['pll'],
         variants: [

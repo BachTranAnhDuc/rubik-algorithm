@@ -2,7 +2,7 @@ slug: t-perm
 name: T-Perm
 display_name: T-Perm
 display_order: 0
-case_state: "UUUUUUUUUFRFRRRRRRRFRFFFFFFDDDDDDDDDLBLLLLLLLBLBBBBBBB"
+case_state: "UUUUUUUUUFFRFFFFFFBLFRRRRRRDDDDDDDDDLRLLLLLLLRBBBBBBBB"
 recognition_md: null
 tags:
   - pll
