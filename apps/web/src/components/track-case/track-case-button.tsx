@@ -1,7 +1,6 @@
 'use client'
 
 import { LEARNING_STATUSES, type LearningStatus, type UserAlgorithm } from '@rubik/shared'
-import { useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -12,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useDeleteAlgorithm } from '@/features/me/use-delete-algorithm'
+import { useMyAlgorithms } from '@/features/me/use-my-algorithms'
 import { useUpdateAlgorithm } from '@/features/me/use-update-algorithm'
 
 interface Props {
@@ -24,24 +24,20 @@ const NOT_TRACKED = 'not-tracked' as const
 type Choice = LearningStatus | typeof NOT_TRACKED
 
 export const TrackCaseButton = ({ caseId, caseSlug, initialAlgorithm }: Props) => {
-  const [current, setCurrent] = useState<Choice>(
-    initialAlgorithm?.status ?? NOT_TRACKED,
-  )
+  const { data } = useMyAlgorithms()
   const update = useUpdateAlgorithm()
   const del = useDeleteAlgorithm()
 
+  const cached = data?.find((u) => u.caseId === caseId)?.status
+  const current: Choice = cached ?? initialAlgorithm?.status ?? NOT_TRACKED
+
   const onChange = (next: Choice) => {
-    const previous = current
-    setCurrent(next)
     if (next === NOT_TRACKED) {
       del.mutate(
         { caseId, caseSlug },
         {
           onSuccess: () => toast.success('Removed from tracking'),
-          onError: () => {
-            setCurrent(previous)
-            toast.error('Failed to remove')
-          },
+          onError: () => toast.error('Failed to remove'),
         },
       )
     } else {
@@ -49,10 +45,7 @@ export const TrackCaseButton = ({ caseId, caseSlug, initialAlgorithm }: Props) =
         { caseId, caseSlug, status: next },
         {
           onSuccess: () => toast.success(`Marked as ${next}`),
-          onError: () => {
-            setCurrent(previous)
-            toast.error('Failed to update')
-          },
+          onError: () => toast.error('Failed to update'),
         },
       )
     }

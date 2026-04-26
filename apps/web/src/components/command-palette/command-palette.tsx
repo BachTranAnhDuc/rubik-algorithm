@@ -15,6 +15,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command'
+import { serverSignOut } from '@/features/auth/sign-out-action'
 import { useCommandPalette } from '@/features/command-palette/store'
 import { useSearch } from '@/features/search/use-search'
 
@@ -103,7 +104,10 @@ export const CommandPalette = () => {
           {session ? (
             <CommandItem
               value="Sign out"
-              onSelect={() => navigate('/api/auth/signout')}
+              onSelect={async () => {
+                setOpen(false)
+                await serverSignOut()
+              }}
             >
               Sign out
             </CommandItem>

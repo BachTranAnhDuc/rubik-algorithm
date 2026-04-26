@@ -4,6 +4,7 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
 import { AlgorithmsTable } from '@/components/me/algorithms-table'
 import { getAllCases } from '@/features/catalog/catalog-fetchers'
@@ -18,7 +19,8 @@ export const metadata: Metadata = {
 
 export default async function MyAlgorithmsPage() {
   const session = await auth()
-  const token = session!.apiAccessToken!
+  const token = session?.apiAccessToken
+  if (!token) redirect('/login?next=/me/algorithms')
 
   const queryClient = new QueryClient()
   await queryClient.prefetchQuery({
