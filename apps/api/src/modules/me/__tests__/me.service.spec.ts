@@ -57,7 +57,7 @@ describe('MeService', () => {
         email: 'a@b.com',
         displayName: 'Ana',
         avatarUrl: null,
-        createdAt,
+        createdAt: '2026-01-01T00:00:00.000Z',
       })
       expect(prisma.user.findUniqueOrThrow).toHaveBeenCalledWith({
         where: { id: 'u1' },

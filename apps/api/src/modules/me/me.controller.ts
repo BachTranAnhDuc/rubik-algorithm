@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common'
 import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger'
 import type { UserAlgorithm } from '@prisma/client'
+import type { User } from '@rubik/shared'
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import type { AuthedUser } from '../../common/types/authed-request'
@@ -23,7 +24,7 @@ export class MeController {
 
   @Get()
   @ApiOkResponse({ description: 'The authenticated user (public fields)' })
-  getCurrent(@CurrentUser() user: AuthedUser) {
+  getCurrent(@CurrentUser() user: AuthedUser): Promise<User> {
     return this.service.getCurrent(user.id)
   }
 

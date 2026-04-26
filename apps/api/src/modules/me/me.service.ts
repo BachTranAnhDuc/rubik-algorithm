@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { Prisma, type UserAlgorithm } from '@prisma/client'
-import type { UpdateUserAlgorithm } from '@rubik/shared'
+import type { UpdateUserAlgorithm, User } from '@rubik/shared'
 import { PrismaService } from 'nestjs-prisma'
 
 import { CaseNotFoundException } from '../catalog/exceptions'
@@ -24,15 +24,9 @@ const buildAlgorithmData = (body: UpdateUserAlgorithm): AlgorithmDataPatch => {
 export class MeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getCurrent(userId: string): Promise<{
-    id: string
-    email: string
-    displayName: string | null
-    avatarUrl: string | null
-    createdAt: Date
-  }> {
+  async getCurrent(userId: string): Promise<User> {
     try {
-      return await this.prisma.user.findUniqueOrThrow({
+      const row = await this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
         select: {
           id: true,
@@ -42,6 +36,7 @@ export class MeService {
           createdAt: true,
         },
       })
+      return { ...row, createdAt: row.createdAt.toISOString() }
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
         throw new UserNotFoundException(userId)
