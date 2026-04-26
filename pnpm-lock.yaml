@@ -193,6 +193,18 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@24.12.2)(terser@5.46.2)
 
+  apps/web:
+    dependencies:
+      '@rubik/cube-core':
+        specifier: workspace:*
+        version: link:../../packages/cube-core
+      '@rubik/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@rubik/visualizer':
+        specifier: workspace:*
+        version: link:../../packages/visualizer
+
   packages/cube-core:
     devDependencies:
       '@vitest/coverage-v8':

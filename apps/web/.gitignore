@@ -1,0 +1,13 @@
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Build artifacts
+dist/
+build/
+
+# Env (never commit; use .env.example)
+.env
+.env.local
+.env.*.local

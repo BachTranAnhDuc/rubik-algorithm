@@ -1,0 +1,22 @@
+{
+  "name": "@rubik/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next node_modules/.cache"
+  },
+  "dependencies": {
+    "@rubik/cube-core": "workspace:*",
+    "@rubik/shared": "workspace:*",
+    "@rubik/visualizer": "workspace:*"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
