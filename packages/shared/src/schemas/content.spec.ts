@@ -7,7 +7,6 @@ describe('PuzzleContentSchema', () => {
     const result = PuzzleContentSchema.safeParse({
       slug: '3x3',
       name: '3x3 Cube',
-      display_name: '3×3',
       wca_event_code: '333',
       display_order: 0,
     })
@@ -18,7 +17,6 @@ describe('PuzzleContentSchema', () => {
     const result = PuzzleContentSchema.parse({
       slug: '3x3',
       name: '3x3 Cube',
-      display_name: '3×3',
       display_order: 0,
     })
     expect(result.state_schema_version).toBe('v1')

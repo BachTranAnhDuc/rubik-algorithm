@@ -5,10 +5,13 @@ import { SlugSchema } from '../utils/slug'
 
 const CASE_STATE_LENGTH = 54
 
+// Note: display_name on Puzzle/AlgorithmSet and description_md on AlgorithmSet are deferred
+// until the API surface needs them. Today the Prisma schema and the @rubik/shared API DTOs
+// don't carry these fields, so accepting them here would be silent data loss on seed.
+// Re-add when (a) the columns land via migration AND (b) the API returns them.
 export const PuzzleContentSchema = z.object({
   slug: SlugSchema,
   name: z.string().min(1),
-  display_name: z.string().min(1),
   wca_event_code: z.string().nullable().optional(),
   display_order: z.number().int().nonnegative(),
   state_schema_version: z.string().default('v1'),
@@ -24,11 +27,9 @@ export const MethodContentSchema = z.object({
 export const SetContentSchema = z.object({
   slug: SlugSchema,
   name: z.string().min(1),
-  display_name: z.string().nullable().optional(),
   case_count_expected: z.number().int().nonnegative(),
   recognition_basis: z.enum(RECOGNITION_BASES),
   display_order: z.number().int().nonnegative(),
-  description_md: z.string().nullable().optional(),
 })
 
 export const VariantContentSchema = z.object({

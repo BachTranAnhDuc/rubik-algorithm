@@ -8,7 +8,6 @@ const validPuzzle = (data: Record<string, unknown> = {}) => ({
   data: {
     slug: '3x3',
     name: '3x3',
-    display_name: '3x3 Cube',
     wca_event_code: '333',
     display_order: 0,
     state_schema_version: 'v1',
@@ -29,11 +28,9 @@ const validSet = (data: Record<string, unknown> = {}) => ({
   data: {
     slug: 'pll',
     name: 'PLL',
-    display_name: 'Permutation of the Last Layer',
     case_count_expected: 21,
     recognition_basis: 'PLL_PERMUTATION',
     display_order: 2,
-    description_md: null,
     ...data,
   },
 })
