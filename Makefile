@@ -60,27 +60,27 @@ dev.docs: ## Run only the docs site in dev (no backing services needed)
 # -- Database ---------------------------------------------------------------
 .PHONY: db.migrate
 db.migrate: ## Create + apply a new migration locally (prisma migrate dev)
-	$(PNPM) --filter @rubik/api prisma migrate dev
+	$(PNPM) --filter @rubik/api exec prisma migrate dev
 
 .PHONY: db.deploy
 db.deploy: ## Apply pending migrations (CI/prod)
-	$(PNPM) --filter @rubik/api prisma migrate deploy
+	$(PNPM) --filter @rubik/api exec prisma migrate deploy
 
 .PHONY: db.reset
 db.reset: ## Drop, recreate, and reseed the local DB (destructive)
-	$(PNPM) --filter @rubik/api prisma migrate reset --force
+	$(PNPM) --filter @rubik/api exec prisma migrate reset --force
 
 .PHONY: db.seed
 db.seed: ## Run the YAML → DB seed pipeline
-	$(PNPM) --filter @rubik/api prisma db seed
+	$(PNPM) --filter @rubik/api exec prisma db seed
 
 .PHONY: db.studio
 db.studio: ## Open Prisma Studio
-	$(PNPM) --filter @rubik/api prisma studio
+	$(PNPM) --filter @rubik/api exec prisma studio
 
 .PHONY: db.format
 db.format: ## Canonicalize prisma/schema.prisma
-	$(PNPM) --filter @rubik/api prisma format
+	$(PNPM) --filter @rubik/api exec prisma format
 
 # -- Content ----------------------------------------------------------------
 .PHONY: content.validate
