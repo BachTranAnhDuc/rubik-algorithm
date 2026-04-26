@@ -46,15 +46,27 @@ packages/visualizer/
 7. Wire keyboard + ARIA + `prefers-reduced-motion` per §20.2.
 8. Add Storybook stories for both SVG and 3D variants.
 
-## Done when
+## Done when (sub-phase 04a — SSR/SVG, shipped)
 
-- [ ] `import { PLLView } from '@rubik/visualizer/ssr'` renders pure SVG with no client JS.
+Tracked at [`docs/plans/2026-04-25-visualizer-ssr-design.md`](../2026-04-25-visualizer-ssr-design.md).
+
+- [x] `import { PLLView } from '@rubik/visualizer/ssr'` renders pure SVG with no client JS.
+- [x] SVG views (TopView, PLLView, OLLView, F2LView) accept a 54-char state string and render via cube-core's sticker convention.
+- [x] WCA color tokens centralized in `tokens/colors.ts` (single source of truth per `020-styling-rule.md`).
+- [x] Vitest unit tests cover sticker-coord math + view rendering against canonical states (19 tests).
+
+## Done when (sub-phase 04b — 3D client, deferred)
+
+To be brainstormed when plan 07's case page is ready to consume the 3D viewer.
+
 - [ ] `import { Visualizer } from '@rubik/visualizer/client'` lazy-loads three.js (chunk size ~200kb gzipped).
 - [ ] Storybook builds; visual snapshots stable for canonical states.
 - [ ] Long sequences (100+ moves) maintain visual correctness — no float drift.
 - [ ] Reduced-motion mode disables animation and shows static end-state.
+- [ ] `client.ts` exports the lazy `Visualizer` instead of re-exporting SSR.
 
 ## Out of scope
 
 - Embedding into the web app — Plan 07.
 - Other puzzles — geometry is 3x3-specific in v1.
+- 3D path concerns are deferred to sub-phase 04b — see "deferred" section above.
