@@ -1924,11 +1924,12 @@ This is the integration point: import `AuthModule` + `MeModule`, register `JwtAu
 
 - [ ] **Step 10.1: Edit `apps/api/src/app.module.ts`**
 
-Replace the file with:
+The file already has `APP_PIPE: ZodValidationPipe` (added in commit `cbdeac5` to close a sub-phase 4 validation gap). Add `APP_GUARD: JwtAuthGuard`, the `JwtAuthGuard` import, and the new `AuthModule` + `MeModule` imports. Final file should be:
 
 ```ts
 import { Module } from '@nestjs/common'
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core'
+import { ZodValidationPipe } from 'nestjs-zod'
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
@@ -1960,6 +1961,7 @@ import { MeModule } from './modules/me/me.module'
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
   ],
 })
