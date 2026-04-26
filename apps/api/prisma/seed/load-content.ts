@@ -1,5 +1,5 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
-import { join, sep } from 'node:path'
+import { join } from 'node:path'
 
 import { load as parseYaml } from 'js-yaml'
 
@@ -124,5 +124,3 @@ export const loadContent = async (rootDir: string): Promise<ContentBundle> => {
 
   return bundle
 }
-
-export const __forTest = { sep }
