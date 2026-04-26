@@ -1,0 +1,17 @@
+slug: ab-perm
+name: Ab-Perm
+display_name: Ab-Perm
+display_order: 2
+case_state: "UUDUUUUUUFFRFFFFFFBRFRRRRRRUDDDDDDDDRLLLLLLLLLBBBBBBBB"
+recognition_md: |
+  Mirror of Aa — three-corner cycle counter-clockwise (looking from U).
+tags:
+  - pll
+  - corner-3-cycle
+  - mirror
+variants:
+  - notation: "x R2 D2 R U R' D2 R U' R x'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null

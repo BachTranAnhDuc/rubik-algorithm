@@ -1,0 +1,17 @@
+slug: t-perm
+name: T-Perm
+display_name: T-Perm
+display_order: 0
+case_state: "UUUUUUUUUFFRFFFFFFBLFRRRRRRDDDDDDDDDLRLLLLLLLRBBBBBBBB"
+recognition_md: |
+  Two adjacent yellow headlights on F; bar of three same-color stickers on the L face;
+  the other two faces show the classic T-perm 2-corner-2-edge swap pattern.
+tags:
+  - pll
+  - edge-corner-3-cycle
+variants:
+  - notation: "R U R' U' R' F R2 U' R' U' R U R' F'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null

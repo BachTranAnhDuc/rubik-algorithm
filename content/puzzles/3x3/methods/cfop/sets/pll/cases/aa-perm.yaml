@@ -1,0 +1,16 @@
+slug: aa-perm
+name: Aa-Perm
+display_name: Aa-Perm
+display_order: 1
+case_state: "UUUUUUUUDFFFFFFRFFLRFRRRRRRUDDDDDDDDBLLLLLLLLRBBBBBBBB"
+recognition_md: |
+  Three-corner cycle clockwise (looking from U). All edges already permuted.
+tags:
+  - pll
+  - corner-3-cycle
+variants:
+  - notation: "x R' U R' D2 R U' R' D2 R2 x'"
+    is_primary: true
+    attribution: null
+    fingertrick_md: null
+    video_url: null
