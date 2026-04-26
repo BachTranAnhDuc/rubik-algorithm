@@ -14,7 +14,7 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
-    include: ['src/**/*.spec.ts'],
+    include: ['src/**/*.spec.ts', 'prisma/**/*.spec.ts'],
     setupFiles: ['./test/setup.ts'],
     coverage: {
       provider: 'v8',
