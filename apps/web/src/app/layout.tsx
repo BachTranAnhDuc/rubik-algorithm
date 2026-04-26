@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import type { ReactNode } from 'react'
 import { Toaster } from 'sonner'
 
+import { CommandPalette } from '@/components/command-palette/command-palette'
 import { SiteHeader } from '@/components/layout/site-header'
 import { RootProviders } from '@/providers/root-providers'
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <RootProviders>
           <SiteHeader />
           {children}
+          <CommandPalette />
           <Toaster richColors position="top-right" />
         </RootProviders>
       </body>

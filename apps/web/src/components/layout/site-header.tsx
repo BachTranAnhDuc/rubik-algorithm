@@ -4,6 +4,8 @@ import { SignInButton } from '@/features/auth/sign-in-button'
 import { SignOutButton } from '@/features/auth/sign-out-button'
 import { getCurrentUser } from '@/lib/auth/session'
 
+import { CommandPaletteTrigger } from './command-palette-trigger'
+
 export const SiteHeader = async () => {
   const user = await getCurrentUser()
 
@@ -17,6 +19,7 @@ export const SiteHeader = async () => {
           <Link href="/3x3" className="text-sm font-medium hover:underline">
             Catalog
           </Link>
+          <CommandPaletteTrigger />
         </nav>
         <div className="flex items-center gap-3">
           {user ? (
