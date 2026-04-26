@@ -1,4 +1,6 @@
 import type { Method } from '@rubik/shared'
+import type { Route } from 'next'
+import Link from 'next/link'
 
 interface MethodCardProps {
   method: Method
@@ -7,8 +9,8 @@ interface MethodCardProps {
 
 export const MethodCard = ({ method, puzzleSlug }: MethodCardProps) => (
   <li>
-    <a
-      href={`/${puzzleSlug}/${method.slug}`}
+    <Link
+      href={`/${puzzleSlug}/${method.slug}` as Route}
       className="block rounded-lg border border-border bg-card p-4 text-card-foreground transition-colors hover:bg-accent"
     >
       <h3 className="text-lg font-semibold">{method.name}</h3>
@@ -17,6 +19,6 @@ export const MethodCard = ({ method, puzzleSlug }: MethodCardProps) => (
           {method.descriptionMd}
         </p>
       ) : null}
-    </a>
+    </Link>
   </li>
 )

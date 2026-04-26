@@ -1,4 +1,6 @@
 import type { AlgorithmCase, RecognitionBasis } from '@rubik/shared'
+import type { Route } from 'next'
+import Link from 'next/link'
 
 import { CubeStateDiagram } from '@/components/cube/cube-state-diagram'
 
@@ -20,8 +22,8 @@ export const CaseCard = ({
   setSlug,
 }: CaseCardProps) => (
   <li>
-    <a
-      href={`/${puzzleSlug}/${methodSlug}/${setSlug}/${c.slug}`}
+    <Link
+      href={`/${puzzleSlug}/${methodSlug}/${setSlug}/${c.slug}` as Route}
       className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card p-3 text-card-foreground transition-colors hover:bg-accent"
     >
       <CubeStateDiagram
@@ -31,6 +33,6 @@ export const CaseCard = ({
         title={c.displayName}
       />
       <span className="text-sm font-medium">{c.displayName}</span>
-    </a>
+    </Link>
   </li>
 )

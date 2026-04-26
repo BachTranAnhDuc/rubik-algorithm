@@ -15,14 +15,13 @@ const PUZZLE_SLUG = '3x3'
 
 export const generateStaticParams = async () => {
   const methods = await getMethods(PUZZLE_SLUG)
-  const params: { method: string; set: string }[] = []
-  for (const m of methods) {
-    const sets = await getSets(PUZZLE_SLUG, m.slug)
-    for (const s of sets) {
-      params.push({ method: m.slug, set: s.slug })
-    }
-  }
-  return params
+  const perMethod = await Promise.all(
+    methods.map(async (m) => {
+      const sets = await getSets(PUZZLE_SLUG, m.slug)
+      return sets.map((s) => ({ method: m.slug, set: s.slug }))
+    }),
+  )
+  return perMethod.flat()
 }
 
 interface PageProps {

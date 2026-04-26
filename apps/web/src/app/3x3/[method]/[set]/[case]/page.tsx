@@ -1,4 +1,5 @@
-import type { Metadata } from 'next'
+import type { Metadata, Route } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { VariantList } from '@/components/algorithm/variant-list'
@@ -18,17 +19,23 @@ const PUZZLE_SLUG = '3x3'
 
 export const generateStaticParams = async () => {
   const methods = await getMethods(PUZZLE_SLUG)
-  const params: { method: string; set: string; case: string }[] = []
-  for (const m of methods) {
-    const sets = await getSets(PUZZLE_SLUG, m.slug)
-    for (const s of sets) {
-      const setData = await getSetWithCases(s.slug)
-      for (const c of setData.cases) {
-        params.push({ method: m.slug, set: s.slug, case: c.slug })
-      }
-    }
-  }
-  return params
+  const perMethod = await Promise.all(
+    methods.map(async (m) => {
+      const sets = await getSets(PUZZLE_SLUG, m.slug)
+      const perSet = await Promise.all(
+        sets.map(async (s) => {
+          const setData = await getSetWithCases(s.slug)
+          return setData.cases.map((c) => ({
+            method: m.slug,
+            set: s.slug,
+            case: c.slug,
+          }))
+        }),
+      )
+      return perSet.flat()
+    }),
+  )
+  return perMethod.flat()
 }
 
 interface PageProps {
@@ -68,17 +75,23 @@ export default async function CasePage({ params }: PageProps) {
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
       <nav className="mb-6 text-sm text-muted-foreground">
-        <a href={`/${PUZZLE_SLUG}`} className="hover:underline">
+        <Link href={`/${PUZZLE_SLUG}` as Route} className="hover:underline">
           3x3
-        </a>
+        </Link>
         {' / '}
-        <a href={`/${PUZZLE_SLUG}/${method}`} className="hover:underline capitalize">
+        <Link
+          href={`/${PUZZLE_SLUG}/${method}` as Route}
+          className="hover:underline capitalize"
+        >
           {method}
-        </a>
+        </Link>
         {' / '}
-        <a href={`/${PUZZLE_SLUG}/${method}/${set}`} className="hover:underline">
+        <Link
+          href={`/${PUZZLE_SLUG}/${method}/${set}` as Route}
+          className="hover:underline"
+        >
           {setData.name}
-        </a>
+        </Link>
         {' / '}
         <span className="font-medium text-foreground">{caseData.displayName}</span>
       </nav>
