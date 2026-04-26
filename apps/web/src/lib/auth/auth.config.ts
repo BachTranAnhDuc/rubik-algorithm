@@ -32,17 +32,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
       }
-      if (token.apiAccessToken && token.apiRefreshToken && token.apiExpiresAt) {
-        const SKEW_MS = 60_000
-        if (token.apiExpiresAt - Date.now() < SKEW_MS) {
-          try {
-            const pair = await refreshApiTokens(token.apiRefreshToken)
-            token.apiAccessToken = pair.accessToken
-            token.apiRefreshToken = pair.refreshToken
-            token.apiExpiresAt = Date.now() + pair.expiresIn * 1000
-          } catch {
-            return null
-          }
+      if (!token.apiAccessToken || !token.apiRefreshToken || !token.apiExpiresAt) {
+        return null
+      }
+      const SKEW_MS = 60_000
+      if (token.apiExpiresAt - Date.now() < SKEW_MS) {
+        try {
+          const pair = await refreshApiTokens(token.apiRefreshToken)
+          token.apiAccessToken = pair.accessToken
+          token.apiRefreshToken = pair.refreshToken
+          token.apiExpiresAt = Date.now() + pair.expiresIn * 1000
+        } catch {
+          return null
         }
       }
       return token

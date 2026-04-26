@@ -14,7 +14,8 @@ export const serverSignOut = async (): Promise<void> => {
         cache: 'no-store',
       })
     } catch {
-      /* idempotent — token revocation is best-effort */
+      // best-effort — any failure (network, config) is safe to swallow;
+      // signOut below clears the Auth.js session regardless.
     }
   }
   await authSignOut({ redirectTo: '/' })
