@@ -4,15 +4,10 @@ import {
   scrambleIntoCase,
   wcaScramble,
 } from '@rubik/cube-core'
-import type { ScrambleResult } from '@rubik/shared'
+import type { ScrambleQuery, ScrambleResult } from '@rubik/shared'
 import { PrismaService } from 'nestjs-prisma'
 
 import { CaseNotFoundException } from '../catalog/exceptions'
-
-interface RandomScrambleInput {
-  puzzle: '3x3'
-  seed?: string
-}
 
 // FNV-1a 32-bit hash. Maps any UTF-8 string to a stable uint32 so user-supplied
 // seed strings can drive cube-core's numeric mulberry32 PRNG seed slot. Pure;
@@ -30,7 +25,7 @@ const fnv1a32 = (s: string): number => {
 export class ScrambleService {
   constructor(private readonly prisma: PrismaService) {}
 
-  randomScramble(input: RandomScrambleInput): ScrambleResult {
+  randomScramble(input: ScrambleQuery): ScrambleResult {
     const numericSeed = input.seed !== undefined ? fnv1a32(input.seed) : undefined
     const moves =
       numericSeed !== undefined
