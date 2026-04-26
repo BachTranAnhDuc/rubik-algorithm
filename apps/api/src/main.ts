@@ -13,6 +13,8 @@ import { ConfigService } from './infra/config/config.service'
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, { bufferLogs: true })
+  // TODO(ducbach, 2026-04-26): set 'trust proxy' for accurate req.ip behind Cloudflare/Fly.
+  // Currently RefreshToken.ip captures the proxy IP in prod, not the client. Sub-phase 9 work.
   app.useLogger(app.get(PinoLogger))
 
   app.use(helmet())
