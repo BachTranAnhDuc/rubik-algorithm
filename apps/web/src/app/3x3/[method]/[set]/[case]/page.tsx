@@ -16,6 +16,8 @@ import {
 import { getMyAlgorithms } from '@/features/me/me-fetchers'
 import type { ApiError } from '@/lib/api-client'
 import { auth } from '@/lib/auth/auth.config'
+import { publicEnv } from '@/lib/env.client'
+import { caseHowToJsonLd } from '@/lib/jsonld'
 import { Markdown } from '@/lib/markdown'
 
 export const revalidate = 600
@@ -87,8 +89,27 @@ export default async function CasePage({ params }: PageProps) {
     }
   }
 
+  const primaryVariant = caseData.variants.find((v) => v.isPrimary)
+  const baseUrl = publicEnv.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+  const jsonLd = primaryVariant
+    ? caseHowToJsonLd({
+        displayName: caseData.displayName,
+        url: `${baseUrl}/${PUZZLE_SLUG}/${method}/${set}/${caseSlug}`,
+        description:
+          caseData.recognitionMd?.slice(0, 200) ??
+          `${caseData.displayName} algorithm.`,
+        primaryNotation: primaryVariant.notation,
+      })
+    : null
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ) : null}
       <nav className="mb-6 text-sm text-muted-foreground">
         <Link href={`/${PUZZLE_SLUG}` as Route} className="hover:underline">
           3x3
@@ -113,7 +134,7 @@ export default async function CasePage({ params }: PageProps) {
 
       <h1 className="mb-8 text-4xl font-bold">{caseData.displayName}</h1>
 
-      <div className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
         {session?.apiAccessToken ? (
           <TrackCaseButton
             caseId={caseData.id}
@@ -128,6 +149,12 @@ export default async function CasePage({ params }: PageProps) {
             Sign in to track this case
           </Link>
         )}
+        <Link
+          href={`/timer?case=${caseData.slug}` as Route}
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          Time this case →
+        </Link>
       </div>
 
       <div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
