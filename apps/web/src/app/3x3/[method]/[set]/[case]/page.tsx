@@ -113,7 +113,7 @@ export default async function CasePage({ params }: PageProps) {
 
       <h1 className="mb-8 text-4xl font-bold">{caseData.displayName}</h1>
 
-      <div className="mb-8">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
         {session?.apiAccessToken ? (
           <TrackCaseButton
             caseId={caseData.id}
@@ -128,6 +128,12 @@ export default async function CasePage({ params }: PageProps) {
             Sign in to track this case
           </Link>
         )}
+        <Link
+          href={`/timer?case=${caseData.slug}` as Route}
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          Time this case →
+        </Link>
       </div>
 
       <div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
