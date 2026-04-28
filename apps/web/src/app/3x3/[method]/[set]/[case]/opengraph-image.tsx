@@ -16,7 +16,7 @@ interface Props {
 const BACKGROUND = '#0a0a0a'
 const FOREGROUND = '#fafafa'
 const MUTED = '#a1a1aa'
-const DIAGRAM_SIZE = 420
+const DIAGRAM_SIZE = 360
 
 const fallback = () =>
   new ImageResponse(
@@ -68,12 +68,34 @@ const OgImage = async ({ params }: Props) => {
           fontFamily: 'system-ui',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: 600 }}>
-          <div style={{ fontSize: 28, color: MUTED }}>rubik-algorithm</div>
-          <div style={{ fontSize: 96, fontWeight: 700, marginTop: 12 }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            maxWidth: 600,
+          }}
+        >
+          <div style={{ display: 'flex', fontSize: 28, color: MUTED }}>
+            rubik-algorithm
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 96,
+              fontWeight: 700,
+              marginTop: 12,
+            }}
+          >
             {caseData.displayName}
           </div>
-          <div style={{ fontSize: 32, color: MUTED, marginTop: 8 }}>
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 32,
+              color: MUTED,
+              marginTop: 8,
+            }}
+          >
             3x3 · cfop · {caseData.slug}
           </div>
         </div>
